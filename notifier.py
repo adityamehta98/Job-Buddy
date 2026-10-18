@@ -125,39 +125,95 @@ def _short_text(value: str, limit: int) -> str:
     return text if len(text) <= limit else f"{text[: limit - 1].rstrip()}…"
 
 
-def _build_company_digest(company_name: str, jobs: list[dict]) -> tuple[str, str]:
-    count = len(jobs)
-    noun = "role" if count == 1 else "roles"
-    heading = f"{company_name}: {count} new {noun} in the last 24 hours"
-    telegram_lines = [f"<b>{html.escape(heading)}</b>", ""]
-    plain_lines = [heading, ""]
+def _job_block(job: dict) -> tuple[str, str]:
+    """Full detail block for one job: (telegram HTML, plain text)."""
+    title = _short_text(job.get("title") or "Untitled role", 90)
+    team = _short_text(job.get("team") or "", 60)
+    location = _short_text(job.get("location") or "", 60)
+    posted = str(job.get("posted") or "")
+    role_number = job.get("job_id") or job.get("role_number") or job.get("key", "")
+    url = _compact_url(job.get("url", ""))
+    match = job.get("match")
+    skill_count = job.get("jd_skill_count")
+    matched_list = job.get("matched")
+    matched_count = len(matched_list) if isinstance(matched_list, list) else job.get("matched_count")
+    missing = job.get("missing") or []
+    match_note = job.get("match_note", "")
 
-    for index, job in enumerate(jobs, 1):
-        title = _short_text(job.get("title") or "Untitled role", 72)
-        location = _short_text(job.get("location") or "", 42)
-        url = _compact_url(job.get("url", ""))
-        label = f"{index}. {title}"
-        if location:
-            label += f" — {location}"
+    tg = [f"📌 <b>{html.escape(title)}</b>"]
+    pl = [f"📌 {title}"]
+    if team:
+        tg.append(f"🏢 {html.escape(team)}")
+        pl.append(f"🏢 {team}")
+    if location:
+        tg.append(f"📍 {html.escape(location)}")
+        pl.append(f"📍 {location}")
+    if match is not None:
+        denom = f" ({matched_count}/{skill_count} keywords)" if skill_count else ""
+        tg.append(f"🎯 CV match: <b>{match}%</b>{html.escape(denom)}")
+        pl.append(f"🎯 CV match: {match}%{denom}")
+        if missing:
+            tg.append(f"🧩 Missing: {html.escape(', '.join(missing[:6]))}")
+            pl.append(f"🧩 Missing: {', '.join(missing[:6])}")
+    elif match_note:
+        tg.append(f"ℹ️ {html.escape(match_note)}")
+        pl.append(f"ℹ️ {match_note}")
+    if posted:
+        tg.append(f"🗓 {html.escape(posted)}")
+        pl.append(f"🗓 {posted}")
+    if role_number:
+        tg.append(f"🆔 <code>{html.escape(str(role_number))}</code>")
+        pl.append(f"🆔 {role_number}")
+    if url:
+        tg.append(f'🔗 <a href="{html.escape(url, quote=True)}">Open posting</a>')
+        pl.append(f"🔗 {url}")
 
-        if url:
-            telegram_lines.append(
-                f'<a href="{html.escape(url, quote=True)}">{html.escape(label)}</a>'
-            )
-            plain_lines.extend([label, url])
-        else:
-            telegram_lines.append(html.escape(label))
-            plain_lines.append(label)
+    return "\n".join(tg), "\n".join(pl)
 
-    return "\n".join(telegram_lines), "\n".join(plain_lines)
+
+# Keep each message safely under Telegram's 4096-char limit.
+_DIGEST_CHAR_BUDGET = 3500
+
+
+def _chunk_blocks(blocks: list[tuple[str, str]], budget: int) -> list[list[tuple[str, str]]]:
+    chunks: list[list[tuple[str, str]]] = []
+    current: list[tuple[str, str]] = []
+    current_len = 0
+    for block in blocks:
+        block_len = max(len(block[0]), len(block[1])) + 2
+        if current and current_len + block_len > budget:
+            chunks.append(current)
+            current, current_len = [], 0
+        current.append(block)
+        current_len += block_len
+    if current:
+        chunks.append(current)
+    return chunks
 
 
 async def send_company_digest(company_name: str, jobs: list[dict]) -> bool:
-    """Send exactly one notification containing every new job for a company."""
+    """Send one notification per company that lists every new job in full.
+
+    Splits into a few messages only if a batch is too large for one message.
+    """
     if not jobs:
         return True
-    telegram, plain = _build_company_digest(company_name, jobs)
-    return await _dispatch(telegram, plain, telegram_parse_mode="HTML")
+
+    blocks = [_job_block(job) for job in jobs]
+    chunks = _chunk_blocks(blocks, _DIGEST_CHAR_BUDGET)
+    total = len(chunks)
+    count = len(jobs)
+    noun = "role" if count == 1 else "roles"
+
+    all_ok = True
+    for index, chunk in enumerate(chunks, 1):
+        part = f" (part {index}/{total})" if total > 1 else ""
+        heading = f"🔔 {count} new {company_name} {noun} in the last 24h{part}"
+        telegram = f"<b>{html.escape(heading)}</b>\n\n" + "\n\n".join(b[0] for b in chunk)
+        plain = heading + "\n\n" + "\n\n".join(b[1] for b in chunk)
+        ok = await _dispatch(telegram, plain, telegram_parse_mode="HTML")
+        all_ok = all_ok and ok
+    return all_ok
 
 
 async def send_summary(company_name: str, new_count: int, total_scraped: int) -> bool:
