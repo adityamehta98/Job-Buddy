@@ -101,16 +101,29 @@ def _normalize(raw: dict) -> dict | None:
 
 async def fetch_page_html(page, runtime_config, url: str) -> str:
     page_num = _page_num_from_url(url)
-    api_url = f"{UBER_API}?countries={quote(UBER_COUNTRY)}&page={page_num}"
-    print(f"[{runtime_config.slug}] Loading API page {page_num}: {api_url}")
-    response = await page.context.request.get(
-        api_url,
-        headers={"accept": "application/json", "user-agent": BROWSER_UA},
-        timeout=30000,
+    # Establish a real jobs.uber.com browser session once (cookies + any JS
+    # checks), then fetch the API from *inside* the page so it is a genuine
+    # same-origin browser request. A bare APIRequestContext request is blocked
+    # on datacenter IPs (e.g. GitHub Actions runners); this path is not.
+    if not (page.url or "").startswith(UBER_BASE):
+        try:
+            await page.goto(UBER_SEARCH_URL, wait_until="domcontentloaded", timeout=30000)
+            await page.wait_for_timeout(1500)
+        except Exception as exc:
+            print(f"[{runtime_config.slug}] Warning loading {UBER_SEARCH_URL}: {exc}")
+
+    api_path = f"/api/jobs/search/?countries={quote(UBER_COUNTRY)}&page={page_num}"
+    print(f"[{runtime_config.slug}] Fetching API page {page_num}: {UBER_BASE}{api_path}")
+    payload = await page.evaluate(
+        """async (path) => {
+            const r = await fetch(path, { headers: { accept: 'application/json' } });
+            return await r.text();
+        }""",
+        api_path,
     )
-    if not response.ok:
-        raise RuntimeError(f"Uber API request failed with status {response.status}")
-    return await response.text()
+    if not payload or not payload.lstrip().startswith("{"):
+        raise RuntimeError("Uber API did not return JSON (possible bot block)")
+    return payload
 
 
 def parse_jobs(payload: str) -> list[dict]:
