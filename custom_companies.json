@@ -1,0 +1,25 @@
+{
+  "_help": [
+    "Add any company by Name + careers URL. The scraper auto-detects the ATS",
+    "(Greenhouse, Lever, Ashby, SmartRecruiters) and pulls new roles.",
+    "Minimal entry:  {\"name\": \"Chime\", \"url\": \"https://careers.chime.com/jobs/\"}",
+    "If auto-detect fails for a custom domain, add \"ats\" and \"token\", e.g.:",
+    "  {\"name\": \"Chime\", \"url\": \"...\", \"ats\": \"greenhouse\", \"token\": \"chime\"}",
+    "Optional per-company filters: included_role_keywords / excluded_role_keywords.",
+    "Everything under \"companies\" is scraped alongside the built-in companies."
+  ],
+  "companies": [
+    {
+      "name": "Chime",
+      "url": "https://careers.chime.com/jobs/",
+      "ats": "greenhouse",
+      "token": "chime"
+    },
+    {
+      "name": "Anthropic",
+      "url": "https://www.anthropic.com/careers/jobs",
+      "ats": "greenhouse",
+      "token": "anthropic"
+    }
+  ]
+}

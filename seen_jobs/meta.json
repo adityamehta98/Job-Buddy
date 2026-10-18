@@ -1,0 +1,48 @@
+{
+  "_meta": {
+    "version": 4,
+    "company": "meta"
+  },
+  "jobs": {
+    "924b0ece1a2b0e59e1bcef2f2fbce733495f9a1ad5073bf7e6a949f17e960f9e": {
+      "first_seen": 1792283505.0463157,
+      "posted": "2026-10-18"
+    },
+    "9b49251c6fa9e7b386ee8b70c78a7898dc56db00d387590b8af955563f185775": {
+      "first_seen": 1792283505.0463212,
+      "posted": "2026-10-18"
+    },
+    "791653ce957a6239151ec29a5b7d174d0544085758c6890c487693b4edb4063d": {
+      "first_seen": 1792283505.046324,
+      "posted": "2026-10-18"
+    },
+    "cafc74171fc03ccfe7783f1deef115d50eb718eb06b6d640d0b8d12c87870848": {
+      "first_seen": 1792283505.0463266,
+      "posted": "2026-10-18"
+    },
+    "9663280988f8dc05619ab0d93eca7640a838422564896bcba7bd1f05181a752b": {
+      "first_seen": 1792283505.0463285,
+      "posted": "2026-10-18"
+    },
+    "bdc037a6d16f2f213cf0085d1c37594eed89121523b927cd5829b39afda9b32f": {
+      "first_seen": 1792283505.0463307,
+      "posted": "2026-10-18"
+    },
+    "b06e00ca863bb0fa2826312466f0415e8c243e86991eb8f60c601e30428184cd": {
+      "first_seen": 1792283505.0463326,
+      "posted": "2026-10-18"
+    },
+    "451e790ca9235cbb85696c4a58bcb419f25c9ca2e3150026c185edd76bf301f9": {
+      "first_seen": 1792283505.0463345,
+      "posted": "2026-10-18"
+    },
+    "bc58cecf0a4b94d15466de92f42e4509bca61aadeaef3f2ca56f5d35204fc576": {
+      "first_seen": 1792283505.0463364,
+      "posted": "2026-10-18"
+    },
+    "ebb1fbf03b3a966f3b90e9d8358565b4741473f1b6cc3c22aa304382f7d77d2c": {
+      "first_seen": 1792283505.0463386,
+      "posted": "2026-10-18"
+    }
+  }
+}

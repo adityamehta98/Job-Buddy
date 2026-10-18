@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Buddy</title>
+<style>
+  :root{
+    color-scheme:dark;
+    --bg:#050505; --panel:#0c0c0d; --panel2:#161618; --line:#2c2c30;
+    --text:#f4f4f5; --muted:#a1a1aa; --accent:#f4f4f5; --accent-text:#09090b; --good:#36c08a;
+    --mid:#e3b341; --bad:#e06c6c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--text)}
+  header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;
+    align-items:center;gap:14px;flex-wrap:wrap;background:#09090b}
+  header h1{font-size:18px;margin:0}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .tab{padding:8px 14px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel);color:var(--muted);cursor:pointer}
+  .tab.active{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+  main{padding:22px;max-width:1150px;margin:0 auto}
+  .view{display:none}.view.active{display:block}
+  .bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  button,.btn{padding:7px 12px;border-radius:7px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--text);cursor:pointer;font-size:13px}
+  button.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+  button:hover{filter:brightness(1.08)}
+  table{width:100%;border-collapse:collapse;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  tr:last-child td{border-bottom:none}
+  a{color:#d4d4d8;text-decoration:none}a:hover{color:#fff}
+  input[type="checkbox"]{accent-color:#a1a1aa}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-weight:600;font-size:12px}
+  .m-good{background:rgba(54,192,138,.16);color:var(--good)}
+  .m-mid{background:rgba(227,179,65,.16);color:var(--mid)}
+  .m-bad{background:rgba(224,108,108,.16);color:var(--bad)}
+  .m-na{background:var(--panel2);color:var(--muted)}
+  .miss{color:var(--muted);font-size:12px}
+  .src{font-size:11px;color:var(--muted)}
+  .muted{color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+  input,select{padding:8px 10px;border-radius:7px;border:1px solid var(--line);
+    background:var(--panel2);color:var(--text);font-size:13px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  label.ck{display:flex;gap:6px;align-items:center;color:var(--muted);cursor:pointer}
+  .note{font-size:12px;color:var(--muted);margin-top:6px}
+  .err{color:var(--bad);font-size:13px}
+  .score-meta{display:block;color:var(--muted);font-size:11px;margin-top:3px;white-space:nowrap}
+  .detail-btn{white-space:nowrap}
+  dialog{width:min(1000px,calc(100vw - 32px));max-height:90vh;padding:0;
+    border:1px solid var(--line);border-radius:14px;background:var(--bg);color:var(--text);
+    box-shadow:0 24px 80px rgba(0,0,0,.5)}
+  dialog::backdrop{background:rgba(0,0,0,.82);backdrop-filter:blur(3px)}
+  .detail-head{position:sticky;top:0;z-index:2;background:var(--panel);padding:18px 22px;
+    border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:16px}
+  .detail-head h2{font-size:20px;line-height:1.3;margin:0 0 4px}
+  .detail-body{padding:20px 22px}
+  .detail-actions{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}
+  .detail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px}
+  .metric{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px}
+  .metric-label{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  .metric-value{font-weight:600;margin-top:3px;overflow-wrap:anywhere}
+  .detail-section{margin-top:22px}.detail-section h3{font-size:15px;margin:0 0 10px}
+  .keyword-list{display:flex;gap:7px;flex-wrap:wrap}
+  .keyword{padding:4px 9px;border-radius:999px;border:1px solid var(--line);font-size:12px}
+  .keyword.hit{border-color:rgba(54,192,138,.45);color:var(--good)}
+  .keyword.miss-key{border-color:rgba(224,108,108,.45);color:var(--bad)}
+  .keyword.unchecked{color:var(--muted)}
+  .evidence{font-size:12px;color:var(--muted);max-width:340px}
+  .jd-text{white-space:pre-wrap;background:var(--panel);border:1px solid var(--line);
+    border-radius:9px;padding:14px;max-height:360px;overflow:auto;line-height:1.6}
+  .detail-note{padding:10px 12px;border-left:3px solid var(--mid);background:rgba(227,179,65,.08);
+    color:var(--muted);margin:12px 0}
+  @media (max-width:760px){.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    th:nth-child(5),td:nth-child(5){display:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Job Buddy</h1>
+  <div class="tabs">
+    <div class="tab active" data-view="jobs">Jobs</div>
+    <div class="tab" data-view="resumes">Resumes</div>
+    <div class="tab" data-view="applied">Applied</div>
+    <div class="tab" data-view="companies">Companies</div>
+  </div>
+</header>
+<main>
+
+  <!-- JOBS -->
+  <section id="jobs" class="view active">
+    <div class="bar">
+      <button class="primary" onclick="loadJobs()">Refresh</button>
+      <label class="ck"><input type="checkbox" id="showApplied"> show applied</label>
+      <label class="ck"><input type="checkbox" id="showBuiltins" checked> include built-in companies</label>
+      <span id="jobsStatus" class="muted"></span>
+    </div>
+    <div id="jobsErr" class="err"></div>
+    <div id="noCv" class="note"></div>
+    <table id="jobsTable">
+      <thead><tr>
+        <th>Company</th><th>Title</th><th>Posted</th><th>Match</th>
+        <th>Missing keywords</th><th></th><th></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- RESUMES -->
+  <section id="resumes" class="view">
+    <div class="card">
+      <strong>Upload a resume</strong> <span class="muted">(PDF, DOCX, or TXT)</span>
+      <div class="row" style="margin-top:10px">
+        <input type="file" id="cvFile" accept=".pdf,.docx,.txt">
+        <button class="primary" onclick="uploadCv()">Upload</button>
+      </div>
+      <div class="note">The newest upload becomes the active resume used for scoring. You can switch anytime below.</div>
+      <div id="cvErr" class="err"></div>
+    </div>
+    <table id="resTable">
+      <thead><tr><th>Active</th><th>File</th><th>Uploaded</th><th>Text</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- APPLIED -->
+  <section id="applied" class="view">
+    <div class="bar"><button class="primary" onclick="loadApplied()">Refresh</button>
+      <span id="appliedStatus" class="muted"></span></div>
+    <table id="appliedTable">
+      <thead><tr><th>Applied on</th><th>Company</th><th>Title</th><th></th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- COMPANIES -->
+  <section id="companies" class="view">
+    <div class="card">
+      <strong>Add a company</strong>
+      <div class="row" style="margin-top:10px">
+        <input id="cName" placeholder="Name (e.g. Chime)" style="min-width:160px">
+        <input id="cUrl" placeholder="Careers URL" style="min-width:320px">
+        <input id="cAts" placeholder="ats (optional)" style="width:130px">
+        <input id="cToken" placeholder="token (optional)" style="width:130px">
+        <button class="primary" onclick="addCompany()">Add</button>
+      </div>
+      <div class="note">Auto-detects Greenhouse, Lever, Ashby, SmartRecruiters. If a custom domain fails, fill ats + token.</div>
+      <div id="coErr" class="err"></div>
+    </div>
+    <table id="coTable">
+      <thead><tr><th>Name</th><th>URL</th><th>ATS</th><th>Token</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+</main>
+
+<dialog id="jobDetail" aria-labelledby="detailTitle">
+  <div class="detail-head">
+    <div><h2 id="detailTitle"></h2><div id="detailCompany" class="muted"></div></div>
+    <div class="detail-actions">
+      <a id="detailApplyLink" class="btn" target="_blank" rel="noopener">Apply on company site</a>
+      <button onclick="$('#jobDetail').close()">Close</button>
+    </div>
+  </div>
+  <div class="detail-body">
+    <div class="detail-grid">
+      <div class="metric"><div class="metric-label">Location</div><div id="detailLocation" class="metric-value"></div></div>
+      <div class="metric"><div class="metric-label">Posted</div><div id="detailPosted" class="metric-value"></div></div>
+      <div class="metric"><div class="metric-label">Keyword coverage</div><div id="detailScore" class="metric-value"></div></div>
+      <div class="metric"><div class="metric-label">Data source</div><div id="detailSource" class="metric-value"></div></div>
+    </div>
+    <div id="detailNote" class="detail-note"></div>
+    <section class="detail-section">
+      <h3>Extracted keywords</h3><div id="detailKeywords" class="keyword-list"></div>
+    </section>
+    <section class="detail-section">
+      <h3>Per-keyword verification</h3>
+      <div style="overflow:auto"><table><thead><tr><th>Keyword</th><th>Status</th><th>Job-description evidence</th><th>Resume evidence</th></tr></thead>
+      <tbody id="detailKeywordRows"></tbody></table></div>
+    </section>
+    <section class="detail-section"><h3>Job description</h3><div id="detailDescription" class="jd-text"></div></section>
+  </div>
+</dialog>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let loadedJobs=[];
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active'); $('#'+t.dataset.view).classList.add('active');
+  if(t.dataset.view==='resumes') loadResumes();
+  if(t.dataset.view==='applied') loadApplied();
+  if(t.dataset.view==='companies') loadCompanies();
+});
+
+function matchPill(m){
+  if(m===null||m===undefined) return '<span class="pill m-na">n/a</span>';
+  const cls = m>=70?'m-good':(m>=40?'m-mid':'m-bad');
+  return `<span class="pill ${cls}">${m}%</span>`;
+}
+
+function scoreMeta(j){
+  if(j.match===null||j.match===undefined) return j.match_basis==='unavailable'?'no full JD':'';
+  return `${j.matched_count||0}/${j.jd_skill_count||0} keywords`;
+}
+
+async function loadJobs(){
+  $('#jobsStatus').textContent='loading...'; $('#jobsErr').textContent='';
+  const un = $('#showApplied').checked ? '0':'1';
+  const bi = $('#showBuiltins').checked ? '1':'0';
+  const r = await fetch(`/api/jobs?unapplied=${un}&builtins=${bi}`);
+  const d = await r.json();
+  loadedJobs=d.jobs||[];
+  $('#noCv').textContent = d.has_cv ? '' : 'No active resume yet. Upload one on the Resumes tab to get match scores.';
+  if(d.errors && d.errors.length) $('#jobsErr').textContent = 'Fetch issues: ' + d.errors.join(' | ');
+  const tb = $('#jobsTable tbody'); tb.innerHTML='';
+  d.jobs.forEach((j,index) => {
+    const miss = (j.missing||[]).slice(0,10).join(', ');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${esc(j.company)}<div class="src">${esc(j.source)}</div></td>
+      <td>${esc(j.title)}<div class="muted">${esc(j.location||'')}</div></td>
+      <td>${esc(j.posted||'')}</td>
+      <td>${matchPill(j.match)}<span class="score-meta">${esc(scoreMeta(j))}</span></td>
+      <td class="miss">${esc(miss)}</td>
+      <td><button class="detail-btn" onclick="openDetails(${index})">View details</button></td>
+      <td><button onclick='apply(${JSON.stringify(j.slug)},${JSON.stringify(j.key)},this)'>Applied</button></td>`;
+    tb.appendChild(tr);
+  });
+  const geo = d.us_only ? ` · US only · ${d.filtered_non_us||0} excluded` : '';
+  $('#jobsStatus').textContent = `${d.jobs.length} jobs${geo}`;
+}
+
+function openDetails(index){
+  const j=loadedJobs[index]; if(!j) return;
+  $('#detailTitle').textContent=j.title||'Untitled role';
+  $('#detailCompany').textContent=[j.company,j.team].filter(Boolean).join(' · ');
+  $('#detailLocation').textContent=j.location||'Not provided';
+  $('#detailPosted').textContent=j.posted||'Not provided';
+  $('#detailScore').textContent=j.match==null?'Not scored':`${j.match}% (${j.matched_count||0}/${j.jd_skill_count||0})`;
+  $('#detailSource').textContent=j.match_basis==='full-description'?'Full job description':'Insufficient job description';
+  const link=$('#detailApplyLink'); link.href=j.url||'#'; link.style.display=j.url?'inline-block':'none';
+  const details=j.keyword_details||[];
+  $('#detailNote').textContent = j.match==null
+    ? (j.jd_chars<50
+      ? 'This role was not scored because a complete job description was unavailable.'
+      : 'Keywords were extracted from the full job description, but they were not checked because no active resume is available in this environment.')
+    : `This is transparent keyword coverage, not a claim of overall job fit. ${j.jd_skill_count} recognized skills were extracted from ${j.jd_chars||0} JD characters and checked against the active resume. `+
+      (j.confidence==='limited'?'Because fewer than four recognized skills were found, treat this percentage as limited-confidence.':'');
+  $('#detailKeywords').innerHTML = details.length ? details.map(k=>
+    `<span class="keyword ${k.matched===true?'hit':k.matched===false?'miss-key':'unchecked'}">${esc(k.keyword)} · ${k.matched===true?'matched':k.matched===false?'missing':'not checked'}</span>`
+  ).join('') : '<span class="muted">No recognized keywords extracted.</span>';
+  $('#detailKeywordRows').innerHTML = details.length ? details.map(k=>`<tr>
+    <td><strong>${esc(k.keyword)}</strong></td>
+    <td><span class="pill ${k.matched===true?'m-good':k.matched===false?'m-bad':'m-na'}">${k.matched===true?'Matched':k.matched===false?'Missing':'Not checked'}</span></td>
+    <td class="evidence">${esc(k.jd_evidence||'—')}</td>
+    <td class="evidence">${esc(k.resume_evidence||'—')}</td></tr>`).join('')
+    : '<tr><td colspan="4" class="muted">No comparison details available.</td></tr>';
+  $('#detailDescription').textContent=j.description||'A complete job description is not available for this role yet.';
+  $('#jobDetail').showModal();
+}
+async function apply(slug,key,btn){
+  btn.disabled=true; btn.textContent='...';
+  await fetch('/api/jobs/apply',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({slug,key})});
+  btn.closest('tr').remove();
+}
+
+async function loadResumes(){
+  const d = await (await fetch('/api/resumes')).json();
+  const tb = $('#resTable tbody'); tb.innerHTML='';
+  d.resumes.forEach(r => {
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="radio" name="active" ${r.active?'checked':''} onchange='setActive(${JSON.stringify(r.id)})'></td>
+      <td>${esc(r.filename)}</td><td>${esc(r.uploaded_at)}</td>
+      <td class="muted">${r.chars} chars</td>
+      <td><button onclick='delResume(${JSON.stringify(r.id)})'>Delete</button></td>`;
+    tb.appendChild(tr);
+  });
+  if(!d.resumes.length) tb.innerHTML='<tr><td colspan="5" class="muted">No resumes uploaded yet.</td></tr>';
+}
+async function uploadCv(){
+  const f=$('#cvFile').files[0]; $('#cvErr').textContent='';
+  if(!f){$('#cvErr').textContent='Pick a file first.';return;}
+  const fd=new FormData(); fd.append('file',f);
+  const d=await (await fetch('/api/resumes',{method:'POST',body:fd})).json();
+  if(!d.ok){$('#cvErr').textContent=d.error||'upload failed';return;}
+  $('#cvFile').value=''; loadResumes();
+}
+async function setActive(id){ await fetch(`/api/resumes/${id}/active`,{method:'POST'}); loadResumes(); }
+async function delResume(id){ await fetch(`/api/resumes/${id}`,{method:'DELETE'}); loadResumes(); }
+
+async function loadApplied(){
+  $('#appliedStatus').textContent='loading...';
+  const d=await (await fetch('/api/applied')).json();
+  const tb=$('#appliedTable tbody'); tb.innerHTML='';
+  d.applied.forEach(a=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(a.applied_at||'')}</td><td>${esc(a.slug)}</td>
+      <td>${esc(a.title||a.key)}</td>
+      <td>${a.url?`<a href="${esc(a.url)}" target="_blank" rel="noopener">open</a>`:''}</td>
+      <td><button onclick='unapply(${JSON.stringify(a.slug)},${JSON.stringify(a.key)},this)'>Unmark</button></td>`;
+    tb.appendChild(tr);
+  });
+  if(!d.applied.length) tb.innerHTML='<tr><td colspan="5" class="muted">Nothing marked applied yet.</td></tr>';
+  $('#appliedStatus').textContent=`${d.applied.length} applied`;
+}
+async function unapply(slug,key,btn){
+  btn.disabled=true;
+  await fetch('/api/jobs/unapply',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({slug,key})});
+  btn.closest('tr').remove();
+}
+
+async function loadCompanies(){
+  const d=await (await fetch('/api/companies')).json();
+  const tb=$('#coTable tbody'); tb.innerHTML='';
+  d.companies.forEach(c=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${esc(c.name)}</td><td class="muted">${esc(c.url)}</td>
+      <td>${esc(c.ats||'auto')}</td><td>${esc(c.token||'auto')}</td>
+      <td><button onclick='delCompany(${JSON.stringify(c.name)})'>Delete</button></td>`;
+    tb.appendChild(tr);
+  });
+  if(!d.companies.length) tb.innerHTML='<tr><td colspan="5" class="muted">No custom companies yet.</td></tr>';
+}
+async function addCompany(){
+  $('#coErr').textContent='';
+  const body={name:$('#cName').value,url:$('#cUrl').value,ats:$('#cAts').value,token:$('#cToken').value};
+  const d=await (await fetch('/api/companies',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(body)})).json();
+  if(!d.ok){$('#coErr').textContent=d.error||'failed';return;}
+  $('#cName').value=$('#cUrl').value=$('#cAts').value=$('#cToken').value='';
+  loadCompanies();
+}
+async function delCompany(name){
+  await fetch('/api/companies',{method:'DELETE',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name})});
+  loadCompanies();
+}
+
+loadJobs();
+</script>
+</body>
+</html>

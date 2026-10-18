@@ -1,0 +1,64 @@
+{
+  "_meta": {
+    "version": 4,
+    "company": "lyft"
+  },
+  "jobs": {
+    "6b6a98a191edaddae38d86df2efd3cab7fe76df02ef57e83e191fc06f5d3dae6": {
+      "first_seen": 1792283494.1604915,
+      "posted": "2026-10-18"
+    },
+    "c62e01feb7e9ad8c1e9d2ecf5a0e871a4b6a470eef67f29d0ce7b8cb26918548": {
+      "first_seen": 1792283494.1604962,
+      "posted": "2026-10-18"
+    },
+    "b60fed90f89ca2477b9ff3526e16541da4d41b6975ac6d06514fecfd508457d9": {
+      "first_seen": 1792283494.1604981,
+      "posted": "2026-10-18"
+    },
+    "ebde998917403a88ef0b428e22babc171015caeb834a02682485d08ba9a4ee58": {
+      "first_seen": 1792283494.1604996,
+      "posted": "2026-10-18"
+    },
+    "86d4d5b1ee78a30c490330e167e434bc9a99fccb6b6c3e8e51a622f84b4ba392": {
+      "first_seen": 1792283494.160501,
+      "posted": "2026-10-18"
+    },
+    "bd78632f840a231585a6e51cabace1040c66943706bacae06a6b93683cf2347d": {
+      "first_seen": 1792283494.1605022,
+      "posted": "2026-10-18"
+    },
+    "aa2eebe0d80f2147bee12f527be21f4f311bc96c4f5b679dc1e087aa7e4dcf45": {
+      "first_seen": 1792283494.160504,
+      "posted": "2026-10-18"
+    },
+    "13acd9ecc2d5df51ad67a7cb33a8143dafc095c41dfd59cc15d8b440f87f3346": {
+      "first_seen": 1792283494.1605053,
+      "posted": "2026-10-18"
+    },
+    "85b0fc3137689114980df53207237522a07c614a117be9ecb4855213b814c0ba": {
+      "first_seen": 1792283494.1605067,
+      "posted": "2026-10-18"
+    },
+    "02ed035095cce38ec2a18a8379ef6dd173937441370a0bb3f75b3c61e3cadaf4": {
+      "first_seen": 1792283494.160508,
+      "posted": "2026-10-18"
+    },
+    "3d5e5bb94ec9d9d6eaefd19b9ced4d29bfd703fea33fe8754c37e93824fab88f": {
+      "first_seen": 1792283494.1605089,
+      "posted": "2026-10-18"
+    },
+    "b9144ca63bbceeb7f49a9ee1b6dcda37f183def088999d37446bf127ff13eb99": {
+      "first_seen": 1792283494.1605108,
+      "posted": "2026-10-18"
+    },
+    "1e8a4a79e9767a0f4f7cc2aaf0d6caf46ee314c19ab5baefe4c9f5c2afbc4601": {
+      "first_seen": 1792283494.1605122,
+      "posted": "2026-10-18"
+    },
+    "6f3fb024aef3291e7b3014e55d31f2456c2869cc4ddcd0e978ba236749b3bde6": {
+      "first_seen": 1792283494.1605132,
+      "posted": "2026-10-18"
+    }
+  }
+}
