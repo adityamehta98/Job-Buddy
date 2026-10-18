@@ -16,6 +16,8 @@ This is a local tool only; it is not meant to be exposed on a public network.
 from __future__ import annotations
 
 import os
+import threading
+import time
 
 from flask import Flask, jsonify, render_template, request
 
@@ -28,10 +30,46 @@ from state import list_applied, mark_applied, unmark_applied
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB upload cap
 
+_launcher_managed = os.getenv("JOB_BUDDY_LAUNCHER") == "1"
+_launcher_lock = threading.Lock()
+_launcher_shutdown_at: float | None = None
+
 
 @app.get("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", launcher_managed=_launcher_managed)
+
+
+# ---- Launcher lifecycle --------------------------------------------------- #
+
+@app.post("/api/launcher/heartbeat")
+def api_launcher_heartbeat():
+    """Cancel a pending shutdown when the managed Brave tab is alive."""
+    global _launcher_shutdown_at
+    if _launcher_managed:
+        with _launcher_lock:
+            _launcher_shutdown_at = None
+    return ("", 204)
+
+
+@app.post("/api/launcher/closing")
+def api_launcher_closing():
+    """Stop the managed server shortly after its dashboard tab closes."""
+    global _launcher_shutdown_at
+    if _launcher_managed:
+        with _launcher_lock:
+            # The grace period lets an ordinary page refresh reconnect.
+            _launcher_shutdown_at = time.monotonic() + 5
+    return ("", 204)
+
+
+def _launcher_watchdog() -> None:
+    while True:
+        time.sleep(0.25)
+        with _launcher_lock:
+            shutdown_at = _launcher_shutdown_at
+        if shutdown_at is not None and time.monotonic() >= shutdown_at:
+            os._exit(0)
 
 
 # ---- Jobs ------------------------------------------------------------------ #
@@ -139,5 +177,10 @@ def api_delete_company():
 if __name__ == "__main__":
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "5000"))
+    if _launcher_managed:
+        # If Brave never reaches the page, do not leave an orphaned server.
+        with _launcher_lock:
+            _launcher_shutdown_at = time.monotonic() + 30
+        threading.Thread(target=_launcher_watchdog, daemon=True).start()
     print(f"Job Buddy running at http://{host}:{port}")
     app.run(host=host, port=port, debug=False)
