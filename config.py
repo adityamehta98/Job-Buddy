@@ -92,6 +92,12 @@ CV_PATH = os.getenv("CV_PATH", "")
 FETCH_JOB_DESCRIPTIONS = _int_env("FETCH_JOB_DESCRIPTIONS", 1)
 # Cap descriptions fetched per company per run, to keep run time bounded.
 JD_FETCH_LIMIT = _int_env("JD_FETCH_LIMIT", 30)
+# The dashboard fetches built-in companies live. Limit the number of result
+# pages per company so a refresh remains reasonably quick.
+UI_MAX_PAGES = max(1, _int_env("UI_MAX_PAGES", 2))
+# Dashboard roles disappear after this many calendar days. When a source does
+# not publish dates, the first date Job Buddy discovers the role is used.
+UI_MAX_AGE_DAYS = max(1, _int_env("UI_MAX_AGE_DAYS", 5))
 # Keep jobs with an explicit United States signal. ALLOW_REMOTE separately
 # permits country-ambiguous remote roles while rejecting explicitly foreign ones.
 US_ONLY = _bool_env("US_ONLY", True)
@@ -102,6 +108,8 @@ ALLOW_REMOTE = _bool_env("ALLOW_REMOTE", True)
 # State
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SEEN_JOBS_DIR = os.path.join(BASE_DIR, "seen_jobs")
+DASHBOARD_DISCOVERY_FILE = os.path.join(BASE_DIR, "dashboard_jobs.json")
+DASHBOARD_CACHE_FILE = os.path.join(BASE_DIR, "dashboard_cache.json")
 MAX_SEEN_JOBS = int(os.getenv("MAX_SEEN_JOBS", "3000"))
 
 # Diagnostics

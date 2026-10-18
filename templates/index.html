@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Job Buddy</title>
+<link rel="icon" href="{{ url_for('static', filename='job-buddy.ico') }}" sizes="any">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='job-buddy-logo.png') }}">
 <style>
   :root{
     color-scheme:dark;
@@ -16,6 +18,9 @@
     background:var(--bg);color:var(--text)}
   header{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;
     align-items:center;gap:14px;flex-wrap:wrap;background:#09090b}
+  .brand{display:flex;align-items:center;gap:10px;margin-right:4px}
+  .brand-logo{width:42px;height:42px;object-fit:cover;border:1px solid var(--line);
+    border-radius:10px;background:#000}
   header h1{font-size:18px;margin:0}
   .tabs{display:flex;gap:6px;flex-wrap:wrap}
   .tab{padding:8px 14px;border-radius:8px;border:1px solid var(--line);
@@ -24,6 +29,11 @@
   main{padding:22px;max-width:1150px;margin:0 auto}
   .view{display:none}.view.active{display:block}
   .bar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .filters{display:grid;grid-template-columns:minmax(220px,2fr) minmax(150px,1fr)
+    minmax(180px,1fr) minmax(190px,1fr) auto;gap:9px;margin-bottom:14px}
+  .filters input,.filters select{width:100%;min-width:0}
+  .pager{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:14px}
+  .pager button:disabled{opacity:.4;cursor:not-allowed}
   button,.btn{padding:7px 12px;border-radius:7px;border:1px solid var(--line);
     background:var(--panel2);color:var(--text);cursor:pointer;font-size:13px}
   button.primary{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
@@ -76,13 +86,18 @@
     border-radius:9px;padding:14px;max-height:360px;overflow:auto;line-height:1.6}
   .detail-note{padding:10px 12px;border-left:3px solid var(--mid);background:rgba(227,179,65,.08);
     color:var(--muted);margin:12px 0}
+  @media (max-width:900px){.filters{grid-template-columns:1fr 1fr 1fr}}
   @media (max-width:760px){.detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .filters{grid-template-columns:1fr 1fr}
     th:nth-child(5),td:nth-child(5){display:none}}
 </style>
 </head>
 <body>
 <header>
-  <h1>Job Buddy</h1>
+  <div class="brand">
+    <img class="brand-logo" src="{{ url_for('static', filename='job-buddy-logo.png') }}" alt="">
+    <h1>Job Buddy</h1>
+  </div>
   <div class="tabs">
     <div class="tab active" data-view="jobs">Jobs</div>
     <div class="tab" data-view="resumes">Resumes</div>
@@ -100,6 +115,19 @@
       <label class="ck"><input type="checkbox" id="showBuiltins" checked> include built-in companies</label>
       <span id="jobsStatus" class="muted"></span>
     </div>
+    <div class="filters">
+      <input id="jobSearch" type="search" placeholder="Search role, company, location, skills…" aria-label="Search jobs">
+      <select id="companyFilter" aria-label="Filter by company"><option value="">All companies</option></select>
+      <select id="dateFilter" aria-label="Filter by posted date"><option value="">All dates (last 5 days)</option></select>
+      <select id="jobSort" aria-label="Sort jobs">
+        <option value="date-desc">Sort: newest first</option>
+        <option value="date-asc">Sort: oldest first</option>
+        <option value="company-asc">Sort: company A–Z</option>
+        <option value="role-asc">Sort: role A–Z</option>
+        <option value="match-desc">Sort: best match</option>
+      </select>
+      <button onclick="clearJobFilters()">Clear</button>
+    </div>
     <div id="jobsErr" class="err"></div>
     <div id="noCv" class="note"></div>
     <table id="jobsTable">
@@ -109,6 +137,11 @@
       </tr></thead>
       <tbody></tbody>
     </table>
+    <div class="pager">
+      <button id="prevPage" onclick="changeJobPage(-1)">Previous</button>
+      <span id="pageStatus" class="muted"></span>
+      <button id="nextPage" onclick="changeJobPage(1)">Next</button>
+    </div>
   </section>
 
   <!-- RESUMES -->
@@ -191,6 +224,18 @@
 const $ = s => document.querySelector(s);
 const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 let loadedJobs=[];
+let filteredJobs=[];
+let currentJobPage=1;
+const jobsPerPage=20;
+let jobsMeta={usOnly:false,filteredNonUs:0,maxAgeDays:5,errors:[]};
+
+const launcherManaged = {{ launcher_managed | tojson }};
+if(launcherManaged){
+  const heartbeat = () => fetch('/api/launcher/heartbeat', {method:'POST', keepalive:true}).catch(()=>{});
+  heartbeat();
+  setInterval(heartbeat, 2000);
+  window.addEventListener('pagehide', () => navigator.sendBeacon('/api/launcher/closing'));
+}
 
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -219,28 +264,112 @@ async function loadJobs(){
   const r = await fetch(`/api/jobs?unapplied=${un}&builtins=${bi}`);
   const d = await r.json();
   loadedJobs=d.jobs||[];
+  jobsMeta={
+    usOnly:!!d.us_only,
+    filteredNonUs:d.filtered_non_us||0,
+    maxAgeDays:d.max_age_days||5,
+    errors:d.errors||[]
+  };
   $('#noCv').textContent = d.has_cv ? '' : 'No active resume yet. Upload one on the Resumes tab to get match scores.';
   if(d.errors && d.errors.length) $('#jobsErr').textContent = 'Fetch issues: ' + d.errors.join(' | ');
-  const tb = $('#jobsTable tbody'); tb.innerHTML='';
-  d.jobs.forEach((j,index) => {
+  populateCompanyFilter();
+  populateDateFilter();
+  applyJobFilters(true);
+}
+
+function populateCompanyFilter(){
+  const select=$('#companyFilter');
+  const selected=select.value;
+  const companies=[...new Set(loadedJobs.map(j=>j.company).filter(Boolean))]
+    .sort((a,b)=>a.localeCompare(b));
+  select.innerHTML='<option value="">All companies</option>';
+  companies.forEach(company=>{
+    const option=document.createElement('option');
+    option.value=company; option.textContent=company;
+    select.appendChild(option);
+  });
+  if(companies.includes(selected)) select.value=selected;
+}
+
+function populateDateFilter(){
+  const select=$('#dateFilter');
+  const selected=select.value;
+  const dates=[...new Set(loadedJobs.map(j=>j.posted).filter(Boolean))].sort().reverse();
+  select.innerHTML='<option value="">All dates (last 5 days)</option>';
+  dates.forEach(date=>{
+    const option=document.createElement('option');
+    option.value=date; option.textContent=`Posted ${date}`;
+    select.appendChild(option);
+  });
+  if(dates.includes(selected)) select.value=selected;
+}
+
+function applyJobFilters(resetPage=true){
+  const query=$('#jobSearch').value.trim().toLowerCase();
+  const company=$('#companyFilter').value;
+  const postedDate=$('#dateFilter').value;
+  filteredJobs=loadedJobs.filter(j=>{
+    const searchable=[j.company,j.title,j.team,j.location,j.posted,...(j.missing||[])]
+      .filter(Boolean).join(' ').toLowerCase();
+    return (!query||searchable.includes(query)) &&
+      (!company||j.company===company) &&
+      (!postedDate||j.posted===postedDate);
+  });
+
+  const sort=$('#jobSort').value;
+  filteredJobs.sort((a,b)=>{
+    if(sort==='date-asc') return (a.posted||'').localeCompare(b.posted||'');
+    if(sort==='company-asc') return (a.company||'').localeCompare(b.company||'')||(a.title||'').localeCompare(b.title||'');
+    if(sort==='role-asc') return (a.title||'').localeCompare(b.title||'')||(a.company||'').localeCompare(b.company||'');
+    if(sort==='match-desc') return (b.match??-1)-(a.match??-1)||(b.posted||'').localeCompare(a.posted||'');
+    return (b.posted||'').localeCompare(a.posted||'')||(a.company||'').localeCompare(b.company||'');
+  });
+  if(resetPage) currentJobPage=1;
+  renderJobs();
+}
+
+function renderJobs(){
+  const pageCount=Math.max(1,Math.ceil(filteredJobs.length/jobsPerPage));
+  currentJobPage=Math.min(Math.max(1,currentJobPage),pageCount);
+  const start=(currentJobPage-1)*jobsPerPage;
+  const pageJobs=filteredJobs.slice(start,start+jobsPerPage);
+  const tb=$('#jobsTable tbody'); tb.innerHTML='';
+  pageJobs.forEach((j,index) => {
     const miss = (j.missing||[]).slice(0,10).join(', ');
+    const dateTitle=j.date_basis==='first-seen'?'First discovered by Job Buddy':'Posted date';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${esc(j.company)}<div class="src">${esc(j.source)}</div></td>
       <td>${esc(j.title)}<div class="muted">${esc(j.location||'')}</div></td>
-      <td>${esc(j.posted||'')}</td>
+      <td title="${esc(dateTitle)}">${esc(j.posted||'')}</td>
       <td>${matchPill(j.match)}<span class="score-meta">${esc(scoreMeta(j))}</span></td>
       <td class="miss">${esc(miss)}</td>
-      <td><button class="detail-btn" onclick="openDetails(${index})">View details</button></td>
+      <td><button class="detail-btn" onclick="openDetails(${start+index})">View details</button></td>
       <td><button onclick='apply(${JSON.stringify(j.slug)},${JSON.stringify(j.key)},this)'>Applied</button></td>`;
     tb.appendChild(tr);
   });
-  const geo = d.us_only ? ` · US only · ${d.filtered_non_us||0} excluded` : '';
-  $('#jobsStatus').textContent = `${d.jobs.length} jobs${geo}`;
+  if(!pageJobs.length) tb.innerHTML='<tr><td colspan="7" class="muted">No jobs match these filters.</td></tr>';
+  const geo=jobsMeta.usOnly?` · US only · ${jobsMeta.filteredNonUs} non-US excluded`:'';
+  $('#jobsStatus').textContent=`${filteredJobs.length} of ${loadedJobs.length} jobs · last ${jobsMeta.maxAgeDays} days${geo}`;
+  $('#pageStatus').textContent=`Page ${currentJobPage} of ${pageCount} · ${jobsPerPage} per page`;
+  $('#prevPage').disabled=currentJobPage<=1;
+  $('#nextPage').disabled=currentJobPage>=pageCount;
+}
+
+function changeJobPage(delta){
+  currentJobPage+=delta;
+  renderJobs();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function clearJobFilters(){
+  $('#jobSearch').value=''; $('#companyFilter').value='';
+  $('#dateFilter').value=''; $('#jobSort').value='date-desc';
+  applyJobFilters(true);
 }
 
 function openDetails(index){
-  const j=loadedJobs[index]; if(!j) return;
+  const j=filteredJobs[index]; if(!j) return;
   $('#detailTitle').textContent=j.title||'Untitled role';
   $('#detailCompany').textContent=[j.company,j.team].filter(Boolean).join(' · ');
   $('#detailLocation').textContent=j.location||'Not provided';
@@ -271,7 +400,8 @@ async function apply(slug,key,btn){
   btn.disabled=true; btn.textContent='...';
   await fetch('/api/jobs/apply',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({slug,key})});
-  btn.closest('tr').remove();
+  loadedJobs=loadedJobs.filter(j=>!(j.slug===slug&&j.key===key));
+  applyJobFilters(false);
 }
 
 async function loadResumes(){
@@ -348,6 +478,12 @@ async function delCompany(name){
   loadCompanies();
 }
 
+$('#jobSearch').addEventListener('input',()=>applyJobFilters(true));
+$('#companyFilter').addEventListener('change',()=>applyJobFilters(true));
+$('#dateFilter').addEventListener('change',()=>applyJobFilters(true));
+$('#jobSort').addEventListener('change',()=>applyJobFilters(true));
+$('#showApplied').addEventListener('change',loadJobs);
+$('#showBuiltins').addEventListener('change',loadJobs);
 loadJobs();
 </script>
 </body>

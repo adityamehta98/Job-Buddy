@@ -9,4 +9,6 @@ venv/
 .mypy_cache/
 artifacts/
 seen_jobs/
+dashboard_jobs.json
+dashboard_cache.json
 resumes/
