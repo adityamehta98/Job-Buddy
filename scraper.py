@@ -16,7 +16,7 @@ import jd_fetch
 import matcher
 import resume_store
 from location_filter import is_us_location
-from notifier import send_error, send_job_alert_for_company, send_summary, verify_channels
+from notifier import send_company_digest, send_error, verify_channels
 from runner import collect_jobs
 from state import (
     filter_new_jobs,
@@ -85,25 +85,24 @@ async def _run_company_scrape(browser, slug: str) -> bool:
         for job in unique_jobs:
             job["_posted_raw"] = job.get("posted", "")
 
-        new_jobs = filter_new_jobs(runtime_config, unique_jobs)
-        print(f"[{runtime_config.slug}] New jobs (not seen before): {len(new_jobs)}")
-
-        before = len(new_jobs)
-        new_jobs = [
+        # Apply eligibility filters before seen-state insertion. This keeps the
+        # persisted list aligned with the roles that can actually be notified.
+        before = len(unique_jobs)
+        unique_jobs = [
             job
-            for job in new_jobs
+            for job in unique_jobs
             if not should_exclude_title(
                 job.get("title", ""),
                 runtime_config.excluded_role_keywords,
                 runtime_config.excluded_title_phrases,
             )
         ]
-        new_jobs = [
+        unique_jobs = [
             job
-            for job in new_jobs
+            for job in unique_jobs
             if not is_excluded_role(job.get("title", ""), runtime_config.excluded_role_keywords)
         ]
-        excluded = before - len(new_jobs)
+        excluded = before - len(unique_jobs)
         if excluded:
             print(f"[{runtime_config.slug}] Excluded {excluded} job(s) by title filter")
 
@@ -111,28 +110,34 @@ async def _run_company_scrape(browser, slug: str) -> bool:
         # include keywords (global config.INCLUDE_KEYWORDS + per-company).
         include_keywords = runtime_config.included_role_keywords
         if include_keywords:
-            before_include = len(new_jobs)
-            new_jobs = [
+            before_include = len(unique_jobs)
+            unique_jobs = [
                 job
-                for job in new_jobs
+                for job in unique_jobs
                 if should_include_title(job.get("title", ""), include_keywords)
             ]
-            dropped = before_include - len(new_jobs)
+            dropped = before_include - len(unique_jobs)
             if dropped:
                 print(f"[{runtime_config.slug}] Dropped {dropped} job(s) not matching include keywords")
 
-        # Recency filter: only keep jobs posted within MAX_AGE_HOURS (where a
-        # real post date is known; undated jobs are kept).
+        # Apply the strict recency window before state insertion. Jobs without
+        # a verifiable post date are excluded when a maximum age is active.
         if config.MAX_AGE_HOURS > 0:
-            before_age = len(new_jobs)
-            new_jobs = [
+            before_age = len(unique_jobs)
+            unique_jobs = [
                 job
-                for job in new_jobs
+                for job in unique_jobs
                 if job_age_within(job.get("_posted_raw", ""), config.MAX_AGE_HOURS)
             ]
-            dropped_age = before_age - len(new_jobs)
+            dropped_age = before_age - len(unique_jobs)
             if dropped_age:
-                print(f"[{runtime_config.slug}] Dropped {dropped_age} job(s) older than {config.MAX_AGE_HOURS}h")
+                print(
+                    f"[{runtime_config.slug}] Dropped {dropped_age} job(s) "
+                    f"older than {config.MAX_AGE_HOURS}h or missing a post date"
+                )
+
+        new_jobs = filter_new_jobs(runtime_config, unique_jobs)
+        print(f"[{runtime_config.slug}] New jobs (not seen before): {len(new_jobs)}")
 
         # Fetch full descriptions for roles that only have a title (big built-ins),
         # so they can be scored against the CV like the API-based companies.
@@ -207,15 +212,13 @@ async def _run_company_scrape(browser, slug: str) -> bool:
         update_seen_job_details(runtime_config.slug, new_jobs)
 
         if new_jobs:
-            print(f"[{runtime_config.slug}] Sending {len(new_jobs)} notification(s)...")
-            for index, job in enumerate(new_jobs, 1):
-                print(f"  [{index}/{len(new_jobs)}] {job['title']}")
-                success = await send_job_alert_for_company(runtime_config.display_name, job)
-                if not success:
-                    print(f"[{runtime_config.slug}] Failed to send notification")
-                if index < len(new_jobs):
-                    await asyncio.sleep(0.5)
-            await send_summary(runtime_config.display_name, len(new_jobs), len(unique_jobs))
+            print(
+                f"[{runtime_config.slug}] Sending one company digest "
+                f"containing {len(new_jobs)} job(s)..."
+            )
+            success = await send_company_digest(runtime_config.display_name, new_jobs)
+            if not success:
+                print(f"[{runtime_config.slug}] Failed to send company digest")
         else:
             print(f"[{runtime_config.slug}] No new jobs to notify.")
 

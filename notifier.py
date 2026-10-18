@@ -11,6 +11,9 @@ enabled channel. Telegram receives a richly formatted version; WhatsApp (and
 any future plain channel) receives a clean plain-text version.
 """
 
+import html
+from urllib.parse import urlsplit, urlunsplit
+
 import httpx
 
 import config
@@ -104,6 +107,57 @@ def _build_job_alert(company_name: str, job: dict) -> tuple[str, str]:
 async def send_job_alert_for_company(company_name: str, job: dict) -> bool:
     markdown, plain = _build_job_alert(company_name, job)
     return await _dispatch(markdown, plain)
+
+
+def _compact_url(value: str) -> str:
+    """Drop tracking/query data while preserving a direct job URL."""
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    parsed = urlsplit(text)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return text
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+
+
+def _short_text(value: str, limit: int) -> str:
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else f"{text[: limit - 1].rstrip()}…"
+
+
+def _build_company_digest(company_name: str, jobs: list[dict]) -> tuple[str, str]:
+    count = len(jobs)
+    noun = "role" if count == 1 else "roles"
+    heading = f"{company_name}: {count} new {noun} in the last 24 hours"
+    telegram_lines = [f"<b>{html.escape(heading)}</b>", ""]
+    plain_lines = [heading, ""]
+
+    for index, job in enumerate(jobs, 1):
+        title = _short_text(job.get("title") or "Untitled role", 72)
+        location = _short_text(job.get("location") or "", 42)
+        url = _compact_url(job.get("url", ""))
+        label = f"{index}. {title}"
+        if location:
+            label += f" — {location}"
+
+        if url:
+            telegram_lines.append(
+                f'<a href="{html.escape(url, quote=True)}">{html.escape(label)}</a>'
+            )
+            plain_lines.extend([label, url])
+        else:
+            telegram_lines.append(html.escape(label))
+            plain_lines.append(label)
+
+    return "\n".join(telegram_lines), "\n".join(plain_lines)
+
+
+async def send_company_digest(company_name: str, jobs: list[dict]) -> bool:
+    """Send exactly one notification containing every new job for a company."""
+    if not jobs:
+        return True
+    telegram, plain = _build_company_digest(company_name, jobs)
+    return await _dispatch(telegram, plain, telegram_parse_mode="HTML")
 
 
 async def send_summary(company_name: str, new_count: int, total_scraped: int) -> bool:

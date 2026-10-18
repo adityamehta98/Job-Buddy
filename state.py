@@ -176,16 +176,16 @@ def _parse_posted(value: str):
 def job_age_within(posted: str, max_age_hours: int) -> bool:
     """True if the job was posted within max_age_hours.
 
-    Jobs with no parseable date are kept (we cannot tell their age). Date-only
-    values are treated as that day at 00:00 UTC.
+    Jobs with no parseable date are excluded when a maximum age is active.
+    Date-only values are treated as that day at 00:00 UTC.
     """
     if max_age_hours <= 0:
         return True
     posted_dt = _parse_posted(posted)
     if posted_dt is None:
-        return True
+        return False
     age_hours = (datetime.now(timezone.utc) - posted_dt).total_seconds() / 3600
-    return age_hours <= max_age_hours
+    return 0 <= age_hours <= max_age_hours
 
 
 def _today_date_string() -> str:

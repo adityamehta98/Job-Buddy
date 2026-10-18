@@ -2,12 +2,24 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import state
 
 
 class StatePersistenceTests(unittest.TestCase):
+    def test_recency_requires_a_real_date_inside_the_window(self):
+        now = datetime.now(timezone.utc)
+        recent = (now - timedelta(hours=2)).isoformat()
+        old = (now - timedelta(hours=25)).isoformat()
+        future = (now + timedelta(hours=2)).isoformat()
+
+        self.assertTrue(state.job_age_within(recent, 24))
+        self.assertFalse(state.job_age_within(old, 24))
+        self.assertFalse(state.job_age_within(future, 24))
+        self.assertFalse(state.job_age_within("", 24))
+
     def test_migrates_legacy_state_without_third_party_text(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             state_path = os.path.join(temp_dir, "sample.json")
