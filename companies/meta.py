@@ -93,6 +93,7 @@ async def fetch_page_html(page, runtime_config, url: str) -> str:
 
 
 COMPANY = CompanyDefinition(
+    allow_empty_results=True,
     slug="meta",
     display_name="Meta",
     default_search_url=META_SEARCH_URL,

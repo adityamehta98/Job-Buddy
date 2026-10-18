@@ -35,6 +35,7 @@ def build_search_url(search_url: str, page_num: int) -> str:
 
 
 COMPANY = CompanyDefinition(
+    allow_empty_results=True,
     slug="google",
     display_name="Google",
     default_search_url=GOOGLE_SEARCH_URL,

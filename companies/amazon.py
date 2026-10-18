@@ -48,6 +48,7 @@ def build_search_url(search_url: str, page_num: int) -> str:
 
 
 COMPANY = CompanyDefinition(
+    allow_empty_results=True,
     slug="amazon",
     display_name="Amazon",
     default_search_url=AMAZON_SEARCH_URL,

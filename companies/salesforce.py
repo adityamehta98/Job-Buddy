@@ -109,6 +109,7 @@ async def _current_page_number(page) -> int:
 
 
 COMPANY = CompanyDefinition(
+    allow_empty_results=True,
     slug="salesforce",
     display_name="Salesforce",
     default_search_url=SALESFORCE_SEARCH_URL,

@@ -30,6 +30,7 @@ async def fetch_page_html(page, runtime_config, url: str) -> str:
 
 
 COMPANY = CompanyDefinition(
+    allow_empty_results=True,
     slug="lyft",
     display_name="Lyft",
     default_search_url=LYFT_SEARCH_URL,

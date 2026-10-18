@@ -125,6 +125,7 @@ async def _current_page_number(page) -> int:
 
 
 COMPANY = CompanyDefinition(
+    allow_empty_results=True,
     slug="cvs",
     display_name="CVS Health",
     default_search_url=CVS_SEARCH_URL,

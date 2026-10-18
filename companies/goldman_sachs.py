@@ -56,6 +56,7 @@ async def fetch_page_html(page, runtime_config, url: str) -> str:
 
 
 COMPANY = CompanyDefinition(
+    allow_empty_results=True,
     slug="goldman-sachs",
     display_name="Goldman Sachs",
     default_search_url=GOLDMAN_SACHS_SEARCH_URL,
