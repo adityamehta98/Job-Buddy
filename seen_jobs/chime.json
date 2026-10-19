@@ -3,7 +3,12 @@
     "version": 4,
     "company": "chime",
     "consecutive_failures": 0,
-    "last_success_at": 1792417727.580569
+    "last_success_at": 1792438420.4928658
   },
-  "jobs": {}
+  "jobs": {
+    "cae2ac3c8006b8007175403c52138e9855a368f8590e38cabb7bdb11991a8d41": {
+      "first_seen": 1792438420.4489067,
+      "posted": "2026-10-19"
+    }
+  }
 }
