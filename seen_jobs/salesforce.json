@@ -2,10 +2,11 @@
   "_meta": {
     "version": 4,
     "company": "salesforce",
-    "consecutive_failures": 1,
+    "consecutive_failures": 2,
     "last_success_at": 1792449169.4141104,
     "last_error": "Unexpected error: No jobs extracted from the first page after retries",
-    "last_failure_at": 1792450079.7797227
+    "last_failure_at": 1792450990.8267488,
+    "last_error_alert_at": 1792450990.8267488
   },
   "jobs": {}
 }
