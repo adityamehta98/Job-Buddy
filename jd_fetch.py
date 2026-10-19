@@ -6,10 +6,34 @@ so the scraper only calls this for new, title-matching, recent roles and caps
 how many it fetches per run.
 """
 
+import re
+from datetime import datetime
+
 UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
+
+_POSTED_DATE_RE = re.compile(
+    r"(?:date\s+posted|posted(?:\s+on)?|publication\s+date)\s*:?\s*"
+    r"((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},\s+\d{4}"
+    r"|\d{4}-\d{2}-\d{2})",
+    re.IGNORECASE,
+)
+
+
+def extract_posted_date(text: str) -> str:
+    """Return an ISO date only when the detail page labels it as posted."""
+    match = _POSTED_DATE_RE.search(" ".join(str(text or "").split()))
+    if not match:
+        return ""
+    value = match.group(1)
+    for date_format in ("%Y-%m-%d", "%B %d, %Y", "%b %d, %Y"):
+        try:
+            return datetime.strptime(value, date_format).date().isoformat()
+        except ValueError:
+            pass
+    return ""
 
 
 async def fetch_job_text(context, url: str, timeout_ms: int = 15000) -> str:

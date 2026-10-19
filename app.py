@@ -101,6 +101,21 @@ def api_unapply():
     return jsonify({"ok": True})
 
 
+@app.post("/api/jobs/details")
+def api_job_details():
+    data = request.get_json(force=True, silent=True) or {}
+    slug, key = str(data.get("slug", "")), str(data.get("key", ""))
+    if not slug or not key:
+        return jsonify({"ok": False, "error": "slug and key required"}), 400
+    try:
+        job = jobs_service.get_builtin_job_details(slug, key)
+    except KeyError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 502
+    return jsonify({"ok": True, "job": job})
+
+
 # ---- Applied --------------------------------------------------------------- #
 
 @app.get("/api/applied")
