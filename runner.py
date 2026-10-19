@@ -12,6 +12,10 @@ BROWSER_USER_AGENT = (
 BROWSER_VIEWPORT = {"width": 1440, "height": 1200}
 
 
+class JobCollectionError(RuntimeError):
+    """Raised when a company page could not produce a trustworthy result set."""
+
+
 async def scrape_page(page, runtime_config: config.CompanyRuntimeConfig, url: str) -> str:
     if runtime_config.definition.fetch_page_html:
         return await runtime_config.definition.fetch_page_html(page, runtime_config, url)
@@ -68,6 +72,25 @@ async def collect_jobs(browser, runtime_config: config.CompanyRuntimeConfig, pag
                 jobs = runtime_config.definition.parse_jobs(html)
                 print(f"[{runtime_config.slug}] Page {page_num}: found {len(jobs)} jobs")
 
+                # A dynamically rendered careers page can occasionally return
+                # an empty shell even though navigation succeeded. Retry the
+                # first page before declaring the company broken.
+                if page_num == 1 and not jobs:
+                    for retry in range(1, 3):
+                        print(
+                            f"[{runtime_config.slug}] Empty first page; "
+                            f"retrying ({retry}/2)..."
+                        )
+                        await page.wait_for_timeout(1500 * retry)
+                        html = await scrape_page(page, runtime_config, url)
+                        jobs = runtime_config.definition.parse_jobs(html)
+                        if jobs:
+                            print(
+                                f"[{runtime_config.slug}] Retry {retry}: "
+                                f"found {len(jobs)} jobs"
+                            )
+                            break
+
                 if page_num == 1:
                     total_pages_from_ui = runtime_config.definition.get_total_pages(html)
                     if total_pages_from_ui:
@@ -94,6 +117,8 @@ async def collect_jobs(browser, runtime_config: config.CompanyRuntimeConfig, pag
                         html=html,
                     )
                     print(f"[{runtime_config.slug}] No jobs found on page {page_num}; stopping pagination.")
+                    if page_num == 1 and not all_jobs:
+                        raise JobCollectionError("No jobs extracted from the first page after retries")
                     break
 
                 all_jobs.extend(jobs)
@@ -106,10 +131,16 @@ async def collect_jobs(browser, runtime_config: config.CompanyRuntimeConfig, pag
             except PlaywrightTimeout as exc:
                 await _capture_diagnostics(page, runtime_config, page_num, "playwright_timeout")
                 print(f"[{runtime_config.slug}] Timeout on page {page_num}: {exc}")
+                if page_num == 1 and not all_jobs:
+                    raise JobCollectionError(f"First page timed out: {exc}") from exc
                 break
+            except JobCollectionError:
+                raise
             except Exception as exc:
                 await _capture_diagnostics(page, runtime_config, page_num, "unexpected_error")
                 print(f"[{runtime_config.slug}] Error on page {page_num}: {exc}")
+                if page_num == 1 and not all_jobs:
+                    raise JobCollectionError(f"First page failed: {exc}") from exc
                 break
     finally:
         await context.close()

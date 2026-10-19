@@ -23,6 +23,7 @@ from state import (
     is_excluded_role,
     job_age_within,
     load_seen_jobs,
+    record_scrape_result,
     should_exclude_title,
     should_include_title,
     update_seen_job_details,
@@ -53,13 +54,18 @@ async def _run_company_scrape(browser, slug: str) -> bool:
                     f"[scraper] WARNING: No jobs were extracted for "
                     f"{runtime_config.display_name}. Treating as non-fatal for this company."
                 )
+                record_scrape_result(runtime_config.slug, True)
                 return True
 
             print(f"[scraper] No jobs were extracted for {runtime_config.display_name}.")
-            await send_error(
-                runtime_config.display_name,
-                "No jobs extracted. The page structure may have changed.",
-            )
+            error_message = "No jobs extracted after retries. The page may be unavailable or changed."
+            if record_scrape_result(runtime_config.slug, False, error_message):
+                await send_error(runtime_config.display_name, error_message)
+            else:
+                print(
+                    f"[{runtime_config.slug}] Suppressing transient/repeated failure alert; "
+                    "details remain in the workflow log and artifacts."
+                )
             return False
 
         # Enforce geography immediately after parsing, before a role can enter
@@ -226,11 +232,19 @@ async def _run_company_scrape(browser, slug: str) -> bool:
             f"[{runtime_config.slug}] Seen jobs database: "
             f"{len(load_seen_jobs(runtime_config.slug))} entries"
         )
+        record_scrape_result(runtime_config.slug, True)
         return True
     except Exception as exc:
         company_name = runtime_config.display_name if runtime_config else slug
         print(f"[{slug}] Unexpected company failure: {exc}")
-        await send_error(company_name, f"Unexpected error: {exc}")
+        error_message = f"Unexpected error: {exc}"
+        if record_scrape_result(slug, False, error_message):
+            await send_error(company_name, error_message)
+        else:
+            print(
+                f"[{slug}] Suppressing transient/repeated failure alert; "
+                "details remain in the workflow log and artifacts."
+            )
         return False
 
 
