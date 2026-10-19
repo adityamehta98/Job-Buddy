@@ -1,8 +1,6 @@
 import unittest
 
-import matcher
-
-
+from core import matcher
 class MatcherTests(unittest.TestCase):
     def test_returns_transparent_per_keyword_evidence(self):
         result = matcher.score(

@@ -23,10 +23,10 @@ import httpx
 from playwright.async_api import async_playwright
 
 import config
-import jd_fetch
-import matcher
-import resume_store
-from location_filter import is_us_location
+from core import jd_fetch
+from core import matcher
+from core import resume_store
+from core.location_filter import is_us_location
 from companies import list_companies
 from companies.generic_ats import (
     api_url_for,
@@ -35,8 +35,8 @@ from companies.generic_ats import (
     sniff_from_html,
     slugify,
 )
-from runner import collect_jobs
-from state import is_applied, should_include_title
+from core.runner import collect_jobs
+from core.state import is_applied, should_include_title
 
 _REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 _CUSTOM_CONFIG = os.path.join(_REPO_ROOT, "custom_companies.json")

@@ -1,7 +1,7 @@
 from urllib.parse import urlsplit, urlunsplit
 
 from companies.base import CompanyDefinition
-from salesforce_parser import get_total_pages, get_total_results, parse_jobs
+from companies.parsers.salesforce import get_total_pages, get_total_results, parse_jobs
 
 SALESFORCE_SEARCH_URL = (
     "https://salesforce.wd12.myworkdayjobs.com/en-US/external_career_site"

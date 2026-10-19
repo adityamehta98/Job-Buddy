@@ -5,16 +5,14 @@ from datetime import date, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
-import jobs_service
-import jd_fetch
-
-
+from core import jobs_service
+from core import jd_fetch
 class JobsServiceTests(unittest.TestCase):
-    @patch("jobs_service.is_applied", return_value=False)
-    @patch("jobs_service.list_companies", return_value=[])
-    @patch("jobs_service.resume_store.active_resume_text", return_value="Python and AWS")
-    @patch("jobs_service._fetch_custom_jobs")
-    @patch("jobs_service.list_custom_companies")
+    @patch("core.jobs_service.is_applied", return_value=False)
+    @patch("core.jobs_service.list_companies", return_value=[])
+    @patch("core.jobs_service.resume_store.active_resume_text", return_value="Python and AWS")
+    @patch("core.jobs_service._fetch_custom_jobs")
+    @patch("core.jobs_service.list_custom_companies")
     def test_filters_non_us_and_scores_full_jd(
         self, custom_companies, fetch_jobs, _resume, _builtins, _applied
     ):
@@ -44,12 +42,12 @@ class JobsServiceTests(unittest.TestCase):
         self.assertEqual(job["missing"], ["sql"])
         self.assertTrue(job["keyword_details"])
 
-    @patch("jobs_service.is_applied", return_value=False)
-    @patch("jobs_service.resume_store.active_resume_text", return_value="")
-    @patch("jobs_service.list_custom_companies", return_value=[])
-    @patch("jobs_service.list_companies", return_value=["apple"])
-    @patch("jobs_service._fetch_builtin_jobs")
-    @patch("jobs_service.config.get_company_runtime")
+    @patch("core.jobs_service.is_applied", return_value=False)
+    @patch("core.jobs_service.resume_store.active_resume_text", return_value="")
+    @patch("core.jobs_service.list_custom_companies", return_value=[])
+    @patch("core.jobs_service.list_companies", return_value=["apple"])
+    @patch("core.jobs_service._fetch_builtin_jobs")
+    @patch("core.jobs_service.config.get_company_runtime")
     def test_fetches_builtin_companies_live(
         self, runtime, fetch_builtins, _companies, _custom, _resume, _applied
     ):
@@ -69,11 +67,11 @@ class JobsServiceTests(unittest.TestCase):
         self.assertEqual(result["jobs"][0]["company"], "Apple")
         self.assertEqual(result["jobs"][0]["source"], "live-built-in")
 
-    @patch("jobs_service.is_applied", return_value=False)
-    @patch("jobs_service.list_companies", return_value=[])
-    @patch("jobs_service.resume_store.active_resume_text", return_value="")
-    @patch("jobs_service._fetch_custom_jobs")
-    @patch("jobs_service.list_custom_companies")
+    @patch("core.jobs_service.is_applied", return_value=False)
+    @patch("core.jobs_service.list_companies", return_value=[])
+    @patch("core.jobs_service.resume_store.active_resume_text", return_value="")
+    @patch("core.jobs_service._fetch_custom_jobs")
+    @patch("core.jobs_service.list_custom_companies")
     def test_removes_jobs_older_than_five_days(
         self, custom_companies, fetch_jobs, _resume, _builtins, _applied
     ):
@@ -131,7 +129,7 @@ class JobsServiceTests(unittest.TestCase):
         )
         self.assertEqual(jd_fetch.extract_posted_date("Copyright 2026"), "")
 
-    @patch("jobs_service.config.get_company_runtime")
+    @patch("core.jobs_service.config.get_company_runtime")
     def test_builtin_cache_with_missing_jd_is_refreshed(self, runtime):
         runtime.return_value = SimpleNamespace(included_role_keywords=("software engineer",))
         jobs = [{
@@ -139,11 +137,11 @@ class JobsServiceTests(unittest.TestCase):
         }]
         self.assertTrue(jobs_service._needs_description_refresh("example", jobs))
 
-    @patch("jobs_service._save_builtin_cache")
-    @patch("jobs_service.resume_store.active_resume_text", return_value="")
-    @patch("jobs_service._fetch_one_description", new_callable=AsyncMock)
-    @patch("jobs_service.config.get_company_runtime")
-    @patch("jobs_service.list_companies", return_value=["apple"])
+    @patch("core.jobs_service._save_builtin_cache")
+    @patch("core.jobs_service.resume_store.active_resume_text", return_value="")
+    @patch("core.jobs_service._fetch_one_description", new_callable=AsyncMock)
+    @patch("core.jobs_service.config.get_company_runtime")
+    @patch("core.jobs_service.list_companies", return_value=["apple"])
     def test_fetches_missing_builtin_jd_on_demand(
         self, _companies, runtime, fetch_description, _resume, _save_cache
     ):

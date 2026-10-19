@@ -111,9 +111,11 @@ LOCAL_TIMEZONE = os.getenv("LOCAL_TIMEZONE", "America/Phoenix").strip() or "Amer
 
 # State
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+os.makedirs(DATA_DIR, exist_ok=True)
 SEEN_JOBS_DIR = os.path.join(BASE_DIR, "seen_jobs")
-DASHBOARD_DISCOVERY_FILE = os.path.join(BASE_DIR, "dashboard_jobs.json")
-DASHBOARD_CACHE_FILE = os.path.join(BASE_DIR, "dashboard_cache.json")
+DASHBOARD_DISCOVERY_FILE = os.path.join(DATA_DIR, "dashboard_jobs.json")
+DASHBOARD_CACHE_FILE = os.path.join(DATA_DIR, "dashboard_cache.json")
 MAX_SEEN_JOBS = int(os.getenv("MAX_SEEN_JOBS", "3000"))
 
 # Diagnostics

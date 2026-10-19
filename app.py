@@ -21,11 +21,11 @@ import time
 
 from flask import Flask, jsonify, render_template, request
 
-import jobs_service
-import resume_store
+from core import jobs_service
+from core import resume_store
 from companies import list_companies
 from companies.generic_ats import slugify
-from state import list_applied, mark_applied, unmark_applied
+from core.state import list_applied, mark_applied, unmark_applied
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB upload cap

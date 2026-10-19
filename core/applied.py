@@ -16,7 +16,7 @@ Examples:
 import argparse
 
 from companies import list_companies
-from state import list_applied, mark_applied
+from core.state import list_applied, mark_applied
 
 
 def parse_args() -> argparse.Namespace:

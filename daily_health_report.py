@@ -29,8 +29,7 @@ from datetime import datetime, timedelta, timezone
 
 import httpx
 
-import notifier
-
+from core import notifier
 API = "https://api.github.com"
 REPO = os.getenv("GITHUB_REPOSITORY", "")
 TOKEN = os.getenv("GITHUB_TOKEN", "")

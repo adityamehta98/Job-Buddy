@@ -12,9 +12,9 @@ import time
 from playwright.async_api import async_playwright
 
 import config
-from location_filter import is_us_location
-from runner import collect_jobs
-from state import is_excluded_role, replace_seen_jobs, should_exclude_title
+from core.location_filter import is_us_location
+from core.runner import collect_jobs
+from core.state import is_excluded_role, replace_seen_jobs, should_exclude_title
 
 
 def parse_args() -> argparse.Namespace:

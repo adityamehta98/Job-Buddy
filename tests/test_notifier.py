@@ -1,9 +1,7 @@
 import unittest
 from unittest.mock import AsyncMock, patch
 
-import notifier
-
-
+from core import notifier
 class CompanyDigestTests(unittest.IsolatedAsyncioTestCase):
     async def test_sends_one_digest_with_every_job_link(self):
         jobs = [

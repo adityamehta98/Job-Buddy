@@ -1,6 +1,6 @@
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-from amazon_parser import get_total_pages, get_total_results, parse_jobs
+from companies.parsers.amazon import get_total_pages, get_total_results, parse_jobs
 from companies.base import CompanyDefinition
 
 AMAZON_SEARCH_URL = (

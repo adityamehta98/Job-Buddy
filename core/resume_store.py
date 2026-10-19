@@ -13,8 +13,7 @@ import time
 import uuid
 from pathlib import Path
 
-import matcher
-
+from core import matcher
 RESUMES_DIR = Path(os.path.dirname(os.path.abspath(__file__))) / "resumes"
 INDEX_FILE = RESUMES_DIR / "index.json"
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt"}

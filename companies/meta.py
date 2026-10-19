@@ -1,7 +1,7 @@
 import asyncio
 
 from companies.base import CompanyDefinition
-from meta_parser import get_total_pages, get_total_results, parse_jobs
+from companies.parsers.meta import get_total_pages, get_total_results, parse_jobs
 
 META_SEARCH_URL = (
     "https://www.metacareers.com/jobsearch/"

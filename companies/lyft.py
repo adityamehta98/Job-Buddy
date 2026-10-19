@@ -1,5 +1,5 @@
 from companies.base import CompanyDefinition
-from lyft_parser import get_total_pages, get_total_results, parse_jobs
+from companies.parsers.lyft import get_total_pages, get_total_results, parse_jobs
 
 LYFT_API_URL = "https://api.careerpuck.com/v1/public/job-boards/lyft"
 LYFT_SEARCH_URL = "https://app.careerpuck.com/job-board/lyft"

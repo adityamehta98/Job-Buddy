@@ -1,7 +1,7 @@
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from companies.base import CompanyDefinition
-from google_parser import get_total_pages, get_total_results, parse_jobs
+from companies.parsers.google import get_total_pages, get_total_results, parse_jobs
 
 GOOGLE_SEARCH_URL = (
     "https://www.google.com/about/careers/applications/jobs/results/"

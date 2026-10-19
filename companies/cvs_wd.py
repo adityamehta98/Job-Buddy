@@ -1,7 +1,7 @@
 from urllib.parse import urlsplit, urlunsplit
 
 from companies.base import CompanyDefinition
-from cvs_wd_parser import get_total_pages, get_total_results, parse_jobs
+from companies.parsers.cvs_wd import get_total_pages, get_total_results, parse_jobs
 
 # jobFamilyGroup param filters to "Technology" category
 CVS_WD_SEARCH_URL = (

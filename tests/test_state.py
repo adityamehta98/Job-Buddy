@@ -5,9 +5,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
-import state
-
-
+from core import state
 class StatePersistenceTests(unittest.TestCase):
     def test_recency_requires_a_real_date_inside_the_window(self):
         now = datetime.now(timezone.utc)

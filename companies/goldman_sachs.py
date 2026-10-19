@@ -1,7 +1,7 @@
 from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from companies.base import CompanyDefinition
-from goldman_sachs_parser import get_total_pages, get_total_results, parse_jobs
+from companies.parsers.goldman_sachs import get_total_pages, get_total_results, parse_jobs
 
 GOLDMAN_SACHS_SEARCH_URL = (
     "https://higher.gs.com/results"

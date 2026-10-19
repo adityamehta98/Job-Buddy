@@ -1,6 +1,6 @@
 import unittest
 
-from location_filter import is_us_location
+from core.location_filter import is_us_location
 
 
 class UsLocationTests(unittest.TestCase):

@@ -12,13 +12,13 @@ import time
 from playwright.async_api import async_playwright
 
 import config
-import jd_fetch
-import matcher
-import resume_store
-from location_filter import is_us_location
-from notifier import send_company_digest, send_error, verify_channels
-from runner import collect_jobs
-from state import (
+from core import jd_fetch
+from core import matcher
+from core import resume_store
+from core.location_filter import is_us_location
+from core.notifier import send_company_digest, send_error, verify_channels
+from core.runner import collect_jobs
+from core.state import (
     filter_new_jobs,
     is_excluded_role,
     job_age_within,
