@@ -1,0 +1,45 @@
+name: Daily Portal Health Report
+
+on:
+  schedule:
+    # 06:40 UTC = 23:40 MST (Arizona, UTC-7, no DST). Jittered off the hour.
+    - cron: "40 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  health-report:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run daily health report
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEALTH_FAIL_THRESHOLD: ${{ vars.HEALTH_FAIL_THRESHOLD }}
+          HEALTH_LOOKBACK_HOURS: ${{ vars.HEALTH_LOOKBACK_HOURS }}
+          NOTIFY_CHANNELS: ${{ vars.NOTIFY_CHANNELS }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GREENAPI_API_URL: ${{ vars.GREENAPI_API_URL }}
+          GREENAPI_ID_INSTANCE: ${{ secrets.GREENAPI_ID_INSTANCE }}
+          GREENAPI_API_TOKEN: ${{ secrets.GREENAPI_API_TOKEN }}
+          GREENAPI_CHAT_ID: ${{ secrets.GREENAPI_CHAT_ID }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python daily_health_report.py
