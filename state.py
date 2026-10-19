@@ -5,13 +5,16 @@ import json
 import os
 import re
 import time
-from datetime import date, datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Sequence
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import config
 from config import CompanyRuntimeConfig
 
 STATE_VERSION = 4
+ERROR_ALERT_AFTER_FAILURES = 2
+ERROR_REMINDER_SECONDS = 6 * 60 * 60
 
 # Regex to split combo titles like "SWE II + Senior SWE" or "PM / Director"
 _COMBO_SPLIT = re.compile(r"\s*[+/|]\s*")
@@ -59,6 +62,10 @@ def _normalize_company_state(company_slug: str, data: Any) -> dict[str, Any]:
         return state
 
     if data.get("_meta", {}).get("version") == STATE_VERSION:
+        metadata = data.get("_meta") if isinstance(data.get("_meta"), dict) else {}
+        state["_meta"].update(
+            {key: value for key, value in metadata.items() if key not in {"version", "company"}}
+        )
         state["jobs"] = jobs
         return state
 
@@ -103,10 +110,59 @@ def load_seen_jobs(company_slug: str) -> dict[str, Any]:
 
 def save_seen_jobs(company_slug: str, seen: dict[str, Any]) -> None:
     _ensure_state_dir()
-    state = _empty_company_state(company_slug)
+    state = _load_company_state(company_slug)
+    state["_meta"]["version"] = STATE_VERSION
+    state["_meta"]["company"] = company_slug
     state["jobs"] = _prune_seen_jobs(dict(seen))
     with open(_company_state_file(company_slug), "w") as handle:
         json.dump(state, handle, indent=2)
+
+
+def record_scrape_result(
+    company_slug: str,
+    success: bool,
+    error: str = "",
+    *,
+    now: float | None = None,
+) -> bool:
+    """Persist scraper health and return whether a failure alert is due.
+
+    A single transient failure stays in the workflow logs. An alert is sent on
+    the second consecutive identical failure, then no more than once every six
+    hours until the scraper recovers. The state lives beside seen jobs so it
+    survives scheduled GitHub Actions runs.
+    """
+    _ensure_state_dir()
+    timestamp = time.time() if now is None else now
+    state = _load_company_state(company_slug)
+    metadata = state["_meta"]
+
+    if success:
+        metadata["consecutive_failures"] = 0
+        metadata["last_success_at"] = timestamp
+        metadata.pop("last_error", None)
+        metadata.pop("last_failure_at", None)
+        metadata.pop("last_error_alert_at", None)
+        should_alert = False
+    else:
+        normalized_error = " ".join(str(error or "Unknown scraper failure").split())
+        same_error = metadata.get("last_error") == normalized_error
+        previous_count = int(metadata.get("consecutive_failures", 0) or 0)
+        failure_count = previous_count + 1 if same_error else 1
+        last_alert_at = float(metadata.get("last_error_alert_at", 0) or 0)
+        should_alert = failure_count == ERROR_ALERT_AFTER_FAILURES or (
+            failure_count > ERROR_ALERT_AFTER_FAILURES
+            and timestamp - last_alert_at >= ERROR_REMINDER_SECONDS
+        )
+        metadata["consecutive_failures"] = failure_count
+        metadata["last_error"] = normalized_error
+        metadata["last_failure_at"] = timestamp
+        if should_alert:
+            metadata["last_error_alert_at"] = timestamp
+
+    with open(_company_state_file(company_slug), "w") as handle:
+        json.dump(state, handle, indent=2)
+    return should_alert
 
 
 def _part_matches_excluded(part: str, excluded_role_keywords: Sequence[str]) -> bool:
@@ -173,6 +229,13 @@ def _parse_posted(value: str):
         return None
 
 
+def _local_now() -> datetime:
+    try:
+        return datetime.now(ZoneInfo(config.LOCAL_TIMEZONE))
+    except ZoneInfoNotFoundError:
+        return datetime.now().astimezone()
+
+
 def job_age_within(posted: str, max_age_hours: int) -> bool:
     """True if the job was posted within max_age_hours.
 
@@ -181,6 +244,17 @@ def job_age_within(posted: str, max_age_hours: int) -> bool:
     """
     if max_age_hours <= 0:
         return True
+    text = str(posted or "").strip()
+    if len(text) == 10:
+        try:
+            posted_date = datetime.strptime(text, "%Y-%m-%d").date()
+        except ValueError:
+            return False
+        # A date-only source does not tell us the posting hour. Compare whole
+        # local calendar days instead of incorrectly assuming midnight UTC.
+        local_now = _local_now()
+        oldest_date = (local_now - timedelta(hours=max_age_hours)).date()
+        return oldest_date <= posted_date <= local_now.date()
     posted_dt = _parse_posted(posted)
     if posted_dt is None:
         return False
@@ -189,7 +263,7 @@ def job_age_within(posted: str, max_age_hours: int) -> bool:
 
 
 def _today_date_string() -> str:
-    return date.today().isoformat()
+    return _local_now().date().isoformat()
 
 
 def _job_state_payload(job: dict, posted_override: str | None = None) -> dict[str, Any]:

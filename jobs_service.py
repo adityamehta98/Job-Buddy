@@ -16,12 +16,14 @@ import json
 import os
 import threading
 import time
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
 from playwright.async_api import async_playwright
 
 import config
+import jd_fetch
 import matcher
 import resume_store
 from location_filter import is_us_location
@@ -187,6 +189,7 @@ async def _fetch_builtins_async(slugs: list[str]) -> tuple[dict[str, list[dict]]
     results: dict[str, list[dict]] = {}
     errors: list[str] = []
     semaphore = asyncio.Semaphore(3)
+    description_semaphore = asyncio.Semaphore(6)
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(
@@ -203,6 +206,41 @@ async def _fetch_builtins_async(slugs: list[str]) -> tuple[dict[str, list[dict]]
                             runtime,
                             min(runtime.max_pages, config.UI_MAX_PAGES),
                         )
+                        # Listing pages for built-in companies usually expose
+                        # only title/location data. Fetch the linked detail
+                        # pages before caching so the dashboard can show and
+                        # score the actual job description.
+                        if config.FETCH_JOB_DESCRIPTIONS:
+                            candidates = [
+                                job for job in jobs
+                                if job.get("url")
+                                and len((job.get("description") or "").strip()) < 50
+                                and should_include_title(
+                                    job.get("title", ""), runtime.included_role_keywords
+                                )
+                            ]
+                            if candidates:
+                                context = await browser.new_context(user_agent=jd_fetch.UA)
+                                try:
+                                    async def fetch_description(job: dict) -> None:
+                                        async with description_semaphore:
+                                            description = await jd_fetch.fetch_job_text(
+                                                context,
+                                                job.get("url", ""),
+                                                config.PAGE_LOAD_TIMEOUT,
+                                            )
+                                            if description:
+                                                job["description"] = description
+                                                if not job.get("posted"):
+                                                    job["posted"] = jd_fetch.extract_posted_date(
+                                                        description
+                                                    )
+
+                                    await asyncio.gather(
+                                        *(fetch_description(job) for job in candidates)
+                                    )
+                                finally:
+                                    await context.close()
                         results[slug] = jobs
                         if not jobs and not runtime.definition.allow_empty_results:
                             errors.append(f"{runtime.display_name}: no jobs were returned")
@@ -216,6 +254,18 @@ async def _fetch_builtins_async(slugs: list[str]) -> tuple[dict[str, list[dict]]
     return results, errors
 
 
+def _needs_description_refresh(slug: str, jobs: list[dict]) -> bool:
+    if not config.FETCH_JOB_DESCRIPTIONS:
+        return False
+    runtime = config.get_company_runtime(slug)
+    return any(
+        job.get("url")
+        and len((job.get("description") or "").strip()) < 50
+        and should_include_title(job.get("title", ""), runtime.included_role_keywords)
+        for job in jobs
+    )
+
+
 def _fetch_builtin_jobs(slugs: list[str]) -> tuple[dict[str, list[dict]], list[str]]:
     """Return cached built-ins immediately and refresh stale data safely."""
     now = time.time()
@@ -226,7 +276,10 @@ def _fetch_builtin_jobs(slugs: list[str]) -> tuple[dict[str, list[dict]], list[s
         cached = _BUILTIN_CACHE.get(slug)
         if cached:
             results[slug] = cached[1]
-            if now - cached[0] >= _BUILTIN_CACHE_TTL:
+            if (
+                now - cached[0] >= _BUILTIN_CACHE_TTL
+                or _needs_description_refresh(slug, cached[1])
+            ):
                 stale.append(slug)
         else:
             missing.append(slug)
@@ -271,15 +324,24 @@ def _fetch_builtin_jobs(slugs: list[str]) -> tuple[dict[str, list[dict]], list[s
 # Stable dates and dashboard age window
 # --------------------------------------------------------------------------- #
 
+def _local_today() -> date:
+    try:
+        return datetime.now(ZoneInfo(config.LOCAL_TIMEZONE)).date()
+    except ZoneInfoNotFoundError:
+        return datetime.now().astimezone().date()
+
+
 def _parse_posted_date(value: str) -> date | None:
     text = str(value or "").strip()
     if not text:
         return None
+    for date_format in ("%Y-%m-%d", "%B %d, %Y", "%b %d, %Y"):
+        try:
+            return datetime.strptime(text, date_format).date()
+        except ValueError:
+            pass
     try:
-        if len(text) == 10:
-            return datetime.strptime(text, "%Y-%m-%d").date()
-        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
-        return parsed.date()
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).date()
     except ValueError:
         return None
 
@@ -305,7 +367,7 @@ def _discovery_key(slug: str, job: dict) -> str:
 
 def _assign_stable_dates(raw_jobs: list[tuple[str, str, dict, str]]) -> list[tuple[str, str, dict, str]]:
     """Use source dates where available, otherwise persist first discovery."""
-    today = datetime.now(timezone.utc).date()
+    today = _local_today()
     oldest_kept = today - timedelta(days=config.UI_MAX_AGE_DAYS)
     with _DISCOVERY_LOCK:
         discoveries = _load_discovery_dates()
@@ -316,21 +378,33 @@ def _assign_stable_dates(raw_jobs: list[tuple[str, str, dict, str]]) -> list[tup
         for company_name, slug, job, source in raw_jobs:
             key = _discovery_key(slug, job)
             active_keys.add(key)
-            posted_date = _parse_posted_date(job.get("posted", ""))
-            if posted_date is None:
-                posted_date = _parse_posted_date(discoveries.get(key, "")) or today
-                if key not in discoveries:
-                    discoveries[key] = posted_date.isoformat()
+            source_posted_date = _parse_posted_date(job.get("posted", ""))
+            if source_posted_date is None:
+                discovery_date = _parse_posted_date(discoveries.get(key, "")) or today
+                # Repair discovery dates written by the old UTC-based logic
+                # when UTC had already advanced to tomorrow in the local zone.
+                if discovery_date > today:
+                    discovery_date = today
+                if discoveries.get(key) != discovery_date.isoformat():
+                    discoveries[key] = discovery_date.isoformat()
                     changed = True
                 job = dict(job)
-                job["posted"] = posted_date.isoformat()
+                # Discovery date controls retention, but it is not a posting
+                # date and must never be presented as one.
+                job["posted"] = ""
+                job["discovered"] = discovery_date.isoformat()
+                job["sort_date"] = discovery_date.isoformat()
                 job["date_basis"] = "first-seen"
+                effective_date = discovery_date
             else:
                 job = dict(job)
-                job["posted"] = posted_date.isoformat()
+                job["posted"] = source_posted_date.isoformat()
+                job["discovered"] = discoveries.get(key, "")
+                job["sort_date"] = source_posted_date.isoformat()
                 job["date_basis"] = "posted"
+                effective_date = source_posted_date
 
-            if oldest_kept <= posted_date <= today:
+            if oldest_kept <= effective_date <= today:
                 output.append((company_name, slug, job, source))
 
         # Bound the local metadata file without retaining identifiers for jobs
@@ -375,6 +449,8 @@ def _enrich(company_name: str, slug: str, job: dict, cv_text: str, source: str) 
         "team": job.get("team", ""),
         "location": job.get("location", ""),
         "posted": job.get("posted", ""),
+        "discovered": job.get("discovered", ""),
+        "sort_date": job.get("sort_date", job.get("posted", "")),
         "date_basis": job.get("date_basis", "posted"),
         "url": job.get("url", ""),
         "description": description,
@@ -384,6 +460,65 @@ def _enrich(company_name: str, slug: str, job: dict, cv_text: str, source: str) 
     }
     enriched.update(result)
     return enriched
+
+
+async def _fetch_one_description(url: str) -> str:
+    async with async_playwright() as playwright:
+        browser = await playwright.chromium.launch(
+            headless=True,
+            args=["--disable-blink-features=AutomationControlled"],
+        )
+        try:
+            context = await browser.new_context(user_agent=jd_fetch.UA)
+            try:
+                return await jd_fetch.fetch_job_text(
+                    context, url, config.PAGE_LOAD_TIMEOUT
+                )
+            finally:
+                await context.close()
+        finally:
+            await browser.close()
+
+
+def get_builtin_job_details(slug: str, key: str) -> dict:
+    """Fetch and cache one built-in job description on demand."""
+    if slug not in set(list_companies()):
+        raise KeyError("Unknown built-in company")
+
+    if slug not in _BUILTIN_CACHE:
+        _, errors = _fetch_builtin_jobs([slug])
+        if errors:
+            raise RuntimeError(errors[0])
+
+    with _BUILTIN_FETCH_LOCK:
+        cached = _BUILTIN_CACHE.get(slug)
+        jobs = cached[1] if cached else []
+
+        job = next((item for item in jobs if str(item.get("key", "")) == str(key)), None)
+        if job is None:
+            raise KeyError("Job is no longer available in the dashboard cache")
+
+        if len((job.get("description") or "").strip()) < 50 and job.get("url"):
+            description = asyncio.run(_fetch_one_description(job["url"]))
+            if description:
+                job["description"] = description
+                if not job.get("posted"):
+                    job["posted"] = jd_fetch.extract_posted_date(description)
+                _BUILTIN_CACHE[slug] = (time.time(), jobs)
+                _save_builtin_cache()
+
+        runtime = config.get_company_runtime(slug)
+        dated = _assign_stable_dates([
+            (runtime.display_name, slug, job, "live-built-in")
+        ])
+        dated_job = dated[0][2] if dated else job
+        return _enrich(
+            runtime.display_name,
+            slug,
+            dated_job,
+            resume_store.active_resume_text(),
+            "live-built-in",
+        )
 
 
 def get_all_jobs(only_unapplied: bool = True, include_builtins: bool = True) -> dict:
@@ -445,7 +580,7 @@ def get_all_jobs(only_unapplied: bool = True, include_builtins: bool = True) -> 
         jobs = [j for j in jobs if not j["applied"]]
 
     # Newest first by default; the dashboard offers additional sort modes.
-    jobs.sort(key=lambda j: (j.get("posted", ""), j.get("company", ""), j.get("title", "")), reverse=True)
+    jobs.sort(key=lambda j: (j.get("sort_date", ""), j.get("company", ""), j.get("title", "")), reverse=True)
 
     return {
         "jobs": jobs,

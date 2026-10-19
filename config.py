@@ -104,6 +104,10 @@ US_ONLY = _bool_env("US_ONLY", True)
 # Include remote roles unless their location explicitly limits them to a
 # foreign geography (for example, "Remote - UK" or "Remote, Canada").
 ALLOW_REMOTE = _bool_env("ALLOW_REMOTE", True)
+# Calendar dates shown in the dashboard and assigned to undated jobs use this
+# timezone instead of UTC. This prevents an evening run in Arizona from being
+# labeled with tomorrow's date after UTC has crossed midnight.
+LOCAL_TIMEZONE = os.getenv("LOCAL_TIMEZONE", "America/Phoenix").strip() or "America/Phoenix"
 
 # State
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
