@@ -98,6 +98,9 @@ UI_MAX_PAGES = max(1, _int_env("UI_MAX_PAGES", 2))
 # Dashboard roles disappear after this many calendar days. When a source does
 # not publish dates, the first date Job Buddy discovers the role is used.
 UI_MAX_AGE_DAYS = max(1, _int_env("UI_MAX_AGE_DAYS", 5))
+# Undated ("Unknown") roles expire sooner than dated ones, since we only know
+# when we first saw them. Removed this many days after first discovery.
+UI_UNKNOWN_MAX_AGE_DAYS = max(1, _int_env("UI_UNKNOWN_MAX_AGE_DAYS", 4))
 # Keep jobs with an explicit United States signal. ALLOW_REMOTE separately
 # permits country-ambiguous remote roles while rejecting explicitly foreign ones.
 US_ONLY = _bool_env("US_ONLY", True)

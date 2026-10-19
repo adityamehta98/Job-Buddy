@@ -395,6 +395,11 @@ def _assign_stable_dates(raw_jobs: list[tuple[str, str, dict, str]]) -> list[tup
                 job["discovered"] = discovery_date.isoformat()
                 job["sort_date"] = discovery_date.isoformat()
                 job["date_basis"] = "first-seen"
+                # Unknown-dated roles carry a day counter and expire sooner
+                # than dated ones (UI_UNKNOWN_MAX_AGE_DAYS from first sight).
+                age_days = (today - discovery_date).days
+                job["age_days"] = age_days
+                job["expires_in_days"] = max(0, config.UI_UNKNOWN_MAX_AGE_DAYS - age_days)
                 effective_date = discovery_date
             else:
                 job = dict(job)
@@ -404,7 +409,11 @@ def _assign_stable_dates(raw_jobs: list[tuple[str, str, dict, str]]) -> list[tup
                 job["date_basis"] = "posted"
                 effective_date = source_posted_date
 
-            if oldest_kept <= effective_date <= today:
+            if job.get("date_basis") == "first-seen":
+                keep = 0 <= job["age_days"] < config.UI_UNKNOWN_MAX_AGE_DAYS
+            else:
+                keep = oldest_kept <= effective_date <= today
+            if keep:
                 output.append((company_name, slug, job, source))
 
         # Bound the local metadata file without retaining identifiers for jobs
@@ -452,6 +461,8 @@ def _enrich(company_name: str, slug: str, job: dict, cv_text: str, source: str) 
         "discovered": job.get("discovered", ""),
         "sort_date": job.get("sort_date", job.get("posted", "")),
         "date_basis": job.get("date_basis", "posted"),
+        "age_days": job.get("age_days"),
+        "expires_in_days": job.get("expires_in_days"),
         "url": job.get("url", ""),
         "description": description,
         "applied": is_applied(slug, key),

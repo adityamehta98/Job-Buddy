@@ -346,7 +346,7 @@ function renderJobs(){
     const hasPostedDate=j.date_basis==='posted'&&j.posted;
     const dateTitle=hasPostedDate?'Verified posting date':'The company did not provide a posting date';
     const dateValue=hasPostedDate?esc(j.posted):'<span class="muted">Unknown</span>';
-    const discoveryNote=!hasPostedDate&&j.discovered?`<div class="src">found ${esc(j.discovered)}</div>`:'';
+    const discoveryNote=!hasPostedDate&&j.discovered?`<div class="src">found ${esc(j.discovered)}${(j.age_days!=null)?' \u00b7 day '+(j.age_days+1)+' of '+((j.age_days+(j.expires_in_days||0))||4):''}</div>`:'';
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${esc(j.company)}<div class="src">${esc(j.source)}</div></td>
