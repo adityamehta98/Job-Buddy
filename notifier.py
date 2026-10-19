@@ -208,7 +208,7 @@ async def send_company_digest(company_name: str, jobs: list[dict]) -> bool:
     all_ok = True
     for index, chunk in enumerate(chunks, 1):
         part = f" (part {index}/{total})" if total > 1 else ""
-        heading = f"🔔 {count} new {company_name} {noun} in the last 24h{part}"
+        heading = f"🔔 {count} new {noun} in the last 24 hours at {company_name}{part}"
         telegram = f"<b>{html.escape(heading)}</b>\n\n" + "\n\n".join(b[0] for b in chunk)
         plain = heading + "\n\n" + "\n\n".join(b[1] for b in chunk)
         ok = await _dispatch(telegram, plain, telegram_parse_mode="HTML")
