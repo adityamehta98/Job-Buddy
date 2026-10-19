@@ -282,7 +282,16 @@ async def run_scraper(selected_companies: list[str] | None = None) -> None:
 
     if failed_companies:
         print(f"[scraper] Failed companies: {', '.join(failed_companies)}")
-        sys.exit(1)
+        # Fail the run only on a total outage. Some companies intermittently
+        # block GitHub's datacenter IPs; a partial miss is reported via the
+        # notifier and saved to artifacts, and must not red an otherwise
+        # successful run (all other companies scraped, seen-state committed).
+        if len(failed_companies) >= len(requested_companies):
+            sys.exit(1)
+        print(
+            f"[scraper] {len(failed_companies)}/{len(requested_companies)} "
+            "company(ies) failed; treating run as successful (partial failure)."
+        )
 
 
 def main() -> None:
