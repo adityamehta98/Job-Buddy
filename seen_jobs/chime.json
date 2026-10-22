@@ -3,12 +3,16 @@
     "version": 4,
     "company": "chime",
     "consecutive_failures": 0,
-    "last_success_at": 1792696817.7299376
+    "last_success_at": 1792708432.0360951
   },
   "jobs": {
     "cae2ac3c8006b8007175403c52138e9855a368f8590e38cabb7bdb11991a8d41": {
       "first_seen": 1792438420.4489067,
       "posted": "2026-10-19"
+    },
+    "3077132acb7a03c3f803ba0648f32c77084b107b3260e001c5934c2524f7ac29": {
+      "first_seen": 1792708431.8410125,
+      "posted": "2026-10-22"
     }
   }
 }
