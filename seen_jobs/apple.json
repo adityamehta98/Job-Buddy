@@ -2,10 +2,10 @@
   "_meta": {
     "version": 4,
     "company": "apple",
-    "consecutive_failures": 2,
+    "consecutive_failures": 3,
     "last_error": "Unexpected error: First page timed out: Page.goto: Timeout 30000ms exceeded. Call log: - navigating to \"https://jobs.apple.com/en-us/search?location=united-states-USA&team=apps-and-frameworks-SFTWR-AF+cloud-and-infrastructure-SFTWR-CLD+core-operating-systems-SFTWR-COS+devops-and-site-reliability-SFTWR-DSR+engineering-project-management-SFTWR-EPM+information-systems-and-technology-SFTWR-ISTECH+machine-learning-and-ai-SFTWR-MCHLN+security-and-privacy-SFTWR-SEC+software-quality-automation-and-tools-SFTWR-SQAT+wireless-software-SFTWR-WSFT&page=1\", waiting until \"domcontentloaded\"",
-    "last_failure_at": 1792611106.6104937,
-    "last_error_alert_at": 1792611106.6104937
+    "last_failure_at": 1792772777.0153277,
+    "last_error_alert_at": 1792772777.0153277
   },
   "jobs": {}
 }
