@@ -3,7 +3,7 @@
     "version": 4,
     "company": "chime",
     "consecutive_failures": 0,
-    "last_success_at": 1793230543.4793854
+    "last_success_at": 1793242519.2133176
   },
   "jobs": {
     "cae2ac3c8006b8007175403c52138e9855a368f8590e38cabb7bdb11991a8d41": {
@@ -13,6 +13,14 @@
     "3077132acb7a03c3f803ba0648f32c77084b107b3260e001c5934c2524f7ac29": {
       "first_seen": 1792708431.8410125,
       "posted": "2026-10-22"
+    },
+    "27d6e344b83e231e4637331eb44f0fca96d319d26d45c27bf74980823f0ef0fb": {
+      "first_seen": 1793242519.148987,
+      "posted": "2026-10-28"
+    },
+    "ddd6dc4b8ff173e4335c8b81e1c27aee6fa59c1a8e4adff282d6390b0eae09ff": {
+      "first_seen": 1793242519.1489906,
+      "posted": "2026-10-28"
     }
   }
 }
