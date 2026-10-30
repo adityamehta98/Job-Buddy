@@ -3,7 +3,7 @@
     "version": 4,
     "company": "uber",
     "consecutive_failures": 0,
-    "last_success_at": 1793363572.97901
+    "last_success_at": 1793364492.4291072
   },
   "jobs": {
     "baff53b7d0ea5300feacc924c9c5a9bd731b63c5a6601c10d7cf3ff158e1b912": {
