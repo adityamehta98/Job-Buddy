@@ -2,10 +2,10 @@
   "_meta": {
     "version": 4,
     "company": "cvs_wd",
-    "consecutive_failures": 3,
+    "consecutive_failures": 4,
     "last_success_at": 1794034923.8104343,
     "last_error": "Unexpected error: No jobs extracted from the first page after retries",
-    "last_failure_at": 1794037710.6765301,
+    "last_failure_at": 1794038613.5554624,
     "last_error_alert_at": 1794036835.3114161
   },
   "jobs": {}
