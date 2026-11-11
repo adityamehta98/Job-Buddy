@@ -3,7 +3,7 @@
     "version": 4,
     "company": "lyft",
     "consecutive_failures": 0,
-    "last_success_at": 1794395836.0628884
+    "last_success_at": 1794396757.415655
   },
   "jobs": {
     "1e8a4a79e9767a0f4f7cc2aaf0d6caf46ee314c19ab5baefe4c9f5c2afbc4601": {
