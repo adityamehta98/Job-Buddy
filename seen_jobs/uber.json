@@ -3,7 +3,7 @@
     "version": 4,
     "company": "uber",
     "consecutive_failures": 0,
-    "last_success_at": 1794596635.7310967
+    "last_success_at": 1794597509.8053598
   },
   "jobs": {
     "baff53b7d0ea5300feacc924c9c5a9bd731b63c5a6601c10d7cf3ff158e1b912": {
@@ -189,6 +189,10 @@
     "f6c56dfd831c68d9aa25bcdf7759d07b15ed1b641c24f9af6654b03b2dbaf230": {
       "first_seen": 1794522480.52939,
       "posted": "2026-11-12"
+    },
+    "518b740d6d7c6142eeafc1a7286bed39de54fb8dcc0e92f6ca9071d16c07f97d": {
+      "first_seen": 1794597509.7709837,
+      "posted": "2026-11-13"
     }
   }
 }
