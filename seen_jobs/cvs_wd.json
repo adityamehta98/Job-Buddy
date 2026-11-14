@@ -5,7 +5,7 @@
     "consecutive_failures": 13,
     "last_success_at": 1794615424.5831308,
     "last_error": "Unexpected error: No jobs extracted from the first page after retries",
-    "last_failure_at": 1794627253.243577,
+    "last_failure_at": 1794627514.6872764,
     "last_error_alert_at": 1794617301.6976619
   },
   "jobs": {}
