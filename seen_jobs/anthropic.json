@@ -3,7 +3,7 @@
     "version": 4,
     "company": "anthropic",
     "consecutive_failures": 0,
-    "last_success_at": 1794874956.8673782
+    "last_success_at": 1794903330.3222003
   },
   "jobs": {
     "513aa575236fb049143313e72a34ac39c00d6afb2a93b8193779f25befe1a0c1": {
@@ -149,6 +149,10 @@
     "904aca343c7c908ebf0bddafe6f228a7cda1d853b441c782b0e687ba62c6dbf0": {
       "first_seen": 1794874956.8385918,
       "posted": "2026-11-16"
+    },
+    "d9a130d54d9ab418dc9cca09a59d325965393c6bb48f9c6c3cf136f97615ccb5": {
+      "first_seen": 1794903330.2875583,
+      "posted": "2026-11-17"
     }
   }
 }
