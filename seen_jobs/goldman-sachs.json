@@ -2,10 +2,10 @@
   "_meta": {
     "version": 4,
     "company": "goldman-sachs",
-    "consecutive_failures": 5,
+    "consecutive_failures": 6,
     "last_success_at": 1795579359.9473076,
     "last_error": "Unexpected error: No jobs extracted from the first page after retries",
-    "last_failure_at": 1795583933.6092596,
+    "last_failure_at": 1795584857.5235577,
     "last_error_alert_at": 1795581244.7521126
   },
   "jobs": {}
